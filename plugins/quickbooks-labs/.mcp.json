@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "quickbooks-labs": {
+      "type": "http",
+      "url": "https://mcp-nttf.quickbooks.intuit.com/mcp",
+      "description": "QuickBooks Labs connects Claude to QuickBooks Online core-accounting tools for company context, accounts, contacts, items, transactions, reports, bank-feed review, reconciliation, tax, attachments, recurring templates, and change tracking.",
+      "headers": {
+        "X-QuickBooks-Labs-Version": "4.8.1"
+      }
+    }
+  }
+}

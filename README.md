@@ -27,6 +27,7 @@ Instead of pasting long Intuit product guidance into prompts, these plugins pack
 | Plugin | Description | Status |
 | --- | --- | --- |
 | [**intuit-developer**](plugins/intuit-developer) | Build QuickBooks integrations with the [Intuit Developer Platform](https://developer.intuit.com): workspace and app setup, sandbox management, browser OAuth, and verified QuickBooks API calls | Available |
+| [**quickbooks-labs**](plugins/quickbooks-labs) | All the actions you can do in QuickBooks, directly inside of Claude | Beta |
 
 See each plugin's README for its skills, MCP servers, and usage details.
 

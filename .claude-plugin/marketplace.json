@@ -25,6 +25,21 @@
         "developer-portal",
         "sandbox"
       ]
+    },
+    {
+      "name": "quickbooks-labs",
+      "source": "./plugins/quickbooks-labs",
+      "description": "QuickBooks bookkeeping for small businesses: bank feeds, receipts, and reports.",
+      "homepage": "https://free.app.intuit.com/quickbooks-labs",
+      "repository": "https://github.com/intuit/intuit-plugins-official/tree/main/plugins/quickbooks-labs",
+      "version": "4.8.1",
+      "license": "Apache-2.0",
+      "tags": [
+        "quickbooks",
+        "accounting",
+        "quickbooks-labs",
+        "mcp"
+      ]
     }
   ]
 }

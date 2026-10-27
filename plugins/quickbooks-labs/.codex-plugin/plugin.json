@@ -1,0 +1,32 @@
+{
+  "name": "quickbooks-labs",
+  "version": "4.8.1",
+  "description": "QuickBooks bookkeeping for small businesses: bank feeds, receipts, and reports.",
+  "author": {
+    "name": "Intuit"
+  },
+  "homepage": "https://free.app.intuit.com/quickbooks-labs",
+  "repository": "https://github.com/intuit/intuit-plugins-official/tree/main/plugins/quickbooks-labs",
+  "license": "Apache-2.0",
+  "keywords": [
+    "quickbooks",
+    "accounting",
+    "quickbooks-labs",
+    "boon",
+    "mcp"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "QuickBooks Labs",
+    "shortDescription": "QuickBooks bookkeeping for small businesses: bank feeds, receipts, and reports.",
+    "longDescription": "QuickBooks bookkeeping for small businesses: bank feeds, receipts, and reports.",
+    "developerName": "Intuit",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read",
+      "Write",
+      "Interactive"
+    ],
+    "brandColor": "#FFE01B"
+  }
+}

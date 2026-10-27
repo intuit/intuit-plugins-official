@@ -1,0 +1,808 @@
+<!-- QuickBooks Labs live report template. Build the file from a title element, this template
+     unchanged, the page data JSON, then </script>. The page fetches every figure through QuickBooks Labs. -->
+<style>
+:root{color-scheme:light dark;--bg:#f6f7f6;--surface:#fff;--fg:#17201b;--muted:#5a6a62;--border:#dde4df;--accent:#0e5a3e;--neg:#b3291e;--warn:#7a4f00;--warn-bg:#fff6e0;--ok:#1e7f4d;--s1:#0e7c66;--s2:#3b5bdb;--s3:#d9480f;--s4:#7048e8;--s5:#c2255c;--s6:#5c940d}
+@media (prefers-color-scheme:dark){:root{--bg:#111513;--surface:#181e1b;--fg:#e7ede9;--muted:#9aa8a0;--border:#2b3631;--accent:#52d19b;--neg:#ff8178;--warn:#ffcc66;--warn-bg:#33290f;--ok:#52d19b;--s1:#4fd1b4;--s2:#8ea5ff;--s3:#ff9b6b;--s4:#b197fc;--s5:#f783ac;--s6:#a9e34b}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+#app{max-width:1040px;margin:0 auto;padding:24px 16px 40px;display:grid;gap:16px}
+.page-head,.report,.observations,.notes{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;min-width:0}
+h1{font-size:22px;margin:2px 0 4px}h2{font-size:17px;margin:0 0 6px}
+.eyebrow{margin:0;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.company{margin:0;color:var(--muted)}.badge,.fetched{margin:8px 0 0;font-size:12.5px;color:var(--muted)}
+.head-row{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.sections{display:grid;gap:16px}
+.facts{display:flex;flex-wrap:wrap;gap:4px 18px;margin:0 0 12px;font-size:12.5px;color:var(--muted)}
+.facts div{display:flex;gap:4px}.facts dt{font-weight:600;color:var(--fg)}.facts dd{margin:0}
+.key-figures{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 14px}
+.figure{border:1px solid var(--border);border-radius:8px;padding:8px 12px;min-width:140px}
+.figure dt{font-size:12px;color:var(--muted)}.figure dd{margin:2px 0 0;font-size:17px;font-weight:650;font-variant-numeric:tabular-nums}.figure.neg dd{color:var(--neg)}
+.checks{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:6px}
+.checks li{padding:7px 10px;border-radius:6px;font-size:13px}
+.checks .ok{background:color-mix(in srgb,var(--ok) 12%,transparent)}.checks .warn{background:var(--warn-bg);color:var(--warn)}
+.table-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{padding:5px 8px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+thead th{font-size:12px;color:var(--muted);font-weight:600;background:var(--surface)}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}td.neg{color:var(--neg)}
+tbody th{font-weight:400}.row-header th{font-weight:600;color:var(--muted)}
+.row-summary th,.row-summary td{font-weight:650;border-top:1px solid var(--muted)}
+.row-summary.level-0 th,.row-summary.level-0 td{border-top:2px solid var(--fg)}
+.state{padding:12px 14px;border-radius:8px;border:1px dashed var(--border);color:var(--muted)}
+.state p{margin:2px 0}.state-title{font-weight:600;color:var(--fg)}
+.state-error{border:1px solid var(--neg);color:var(--fg)}.state-error .state-title{color:var(--neg)}
+.state-warn{border:1px solid var(--warn);background:var(--warn-bg)}
+.code{font-family:ui-monospace,SFMono-Regular,monospace;font-size:12px;color:var(--muted)}
+.chart-figure{margin:0 0 14px}.chart-title{font-weight:600;margin-bottom:6px}
+svg.chart{width:100%;height:auto;display:block}
+.chart .grid{stroke:var(--border)}.chart .zero{stroke:var(--fg);stroke-width:1.2}
+.chart .tick{fill:var(--muted);font-size:11px}.chart .axis-label{fill:var(--muted);font-size:12px}
+.chart .line{fill:none;stroke-width:2.2}.chart .value{fill:var(--fg);font-size:11px}
+.chart-note{font-size:12px;color:var(--muted);margin:4px 0 0}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;list-style:none;padding:0;margin:6px 0 0;font-size:12.5px}
+.swatch{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px}
+.observations ul,.notes ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.refresh{font:inherit;font-weight:600;color:var(--accent);background:transparent;border:1px solid var(--accent);border-radius:7px;padding:6px 14px;cursor:pointer}
+.refresh:disabled{opacity:.5;cursor:default}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+</style>
+<main id="app" aria-live="polite"><p>Loading live report…</p></main>
+<script>
+/* claudebooks:renderer:start */
+const CB = (() => {
+  // The SVG XML namespace name that createElementNS requires. It is an identifier, not a page the browser loads.
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  const MONEY_TYPES = new Set(['Money', 'Double']);
+  const PALETTE = ['--s1', '--s2', '--s3', '--s4', '--s5', '--s6'];
+
+  const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+  const has = (obj, key) => isObj(obj) && Object.prototype.hasOwnProperty.call(obj, key);
+  const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
+
+  function el(tag, cls, text) {
+    const node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text !== undefined && text !== null) node.textContent = String(text);
+    return node;
+  }
+
+  function append(parent, ...children) {
+    for (const child of children) {
+      if (child !== null && child !== undefined && child !== false && child !== '') parent.append(child);
+    }
+    return parent;
+  }
+
+  function svg(tag, attrs = {}, text) {
+    const node = document.createElementNS(SVG_NS, tag);
+    for (const [key, value] of Object.entries(attrs)) {
+      if (value !== undefined && value !== null && value !== '') node.setAttribute(key, String(value));
+    }
+    if (text !== undefined) node.textContent = String(text);
+    return node;
+  }
+
+  function readData(id) {
+    const node = document.getElementById(id);
+    const text = node ? node.textContent.trim() : '';
+    if (!text) throw new Error('The page has no data block.');
+    try {
+      return JSON.parse(text);
+    } catch (error) {
+      throw new Error(`The data block is not valid JSON: ${error.message}`);
+    }
+  }
+
+  function checkRows(list, name) {
+    if (!Array.isArray(list)) return `${name} must be a list`;
+    for (let i = 0; i < list.length; i++) {
+      const row = list[i];
+      if (!isObj(row)) return `${name}[${i}] is not an object`;
+      if (row.values !== undefined) {
+        if (!isObj(row.values)) return `${name}[${i}].values is not an object`;
+        for (const [col, value] of Object.entries(row.values)) {
+          if (value !== null && !isNum(value)) return `${name}[${i}].values.${col} is not a number or null`;
+        }
+      }
+      if (row.cells !== undefined && !isObj(row.cells)) return `${name}[${i}].cells is not an object`;
+    }
+    return null;
+  }
+
+  function checkReport(report) {
+    if (!isObj(report)) return 'the report is missing';
+    if (!isObj(report.meta)) return 'report.meta is missing';
+    if (!Array.isArray(report.columns) || !report.columns.every((c) => isObj(c) && typeof c.key === 'string')) {
+      return 'report.columns must be a list of columns with a key';
+    }
+    return checkRows(report.rows, 'rows') || checkRows(report.totals === undefined ? [] : report.totals, 'totals');
+  }
+
+  function fmtDate(iso) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''));
+    if (!m) return String(iso || '');
+    return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])).toLocaleDateString(undefined, {
+      timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric',
+    });
+  }
+
+  function fmtDateTime(value) {
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value || '');
+    return date.toLocaleString(undefined, {
+      month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
+    });
+  }
+
+  function periodText(period) {
+    if (!isObj(period)) return '';
+    const { start, end } = period;
+    if (start && end && start !== end) return `${fmtDate(start)} – ${fmtDate(end)}`;
+    if (end || start) return `As of ${fmtDate(end || start)}`;
+    return period.macro ? String(period.macro) : '';
+  }
+
+  function fmtMoney(value, currency, digits = 2) {
+    const plain = { minimumFractionDigits: digits, maximumFractionDigits: digits };
+    if (!currency) return value.toLocaleString(undefined, plain);
+    try {
+      return new Intl.NumberFormat(undefined, { style: 'currency', currency, currencyDisplay: 'narrowSymbol', ...plain }).format(value);
+    } catch {
+      return `${value.toLocaleString(undefined, plain)} ${currency}`;
+    }
+  }
+
+  function fmtPercent(value) {
+    return `${value.toLocaleString(undefined, { maximumFractionDigits: 4 })}%`;
+  }
+
+  function fmtValue(value, column, currency) {
+    if (!isNum(value)) return '';
+    const type = column && column.type;
+    if (type === 'Percent') return fmtPercent(value);
+    if (MONEY_TYPES.has(type)) return fmtMoney(value, currency);
+    return value.toLocaleString(undefined, { maximumFractionDigits: 6 });
+  }
+
+  function grandTotal(columns, row) {
+    const present = (c) => has(row.values, c.key) && isNum(row.values[c.key]);
+    const reversed = columns.slice().reverse();
+    const pick = reversed.find((c) => c.col_key === 'total' && present(c))
+      || reversed.find((c) => MONEY_TYPES.has(c.type) && present(c))
+      || columns.find(present);
+    return pick ? { column: pick, value: row.values[pick.key] } : null;
+  }
+
+  function tieOut(report) {
+    const totals = report.totals || [];
+    const find = (group, label) => totals.find((t) => t.group === group)
+      || totals.find((t) => String(t.label || '').trim().toUpperCase() === label);
+    const kind = report.meta.report;
+    const assets = find('TotalAssets', 'TOTAL ASSETS');
+    if (kind === 'BalanceSheet' || assets) {
+      const equity = find('TotalLiabilitiesAndEquity', 'TOTAL LIABILITIES AND EQUITY');
+      const a = assets && grandTotal(report.columns, assets);
+      const b = equity && grandTotal(report.columns, equity);
+      if (!a || !b) return { missing: 'TOTAL ASSETS or TOTAL LIABILITIES AND EQUITY was not returned, so the balance check could not run.' };
+      return { left: 'TOTAL ASSETS', right: 'TOTAL LIABILITIES AND EQUITY', a: a.value, b: b.value, column: a.column };
+    }
+    if (kind === 'TrialBalance') {
+      const debit = report.columns.find((c) => /debit/i.test(c.key));
+      const credit = report.columns.find((c) => /credit/i.test(c.key));
+      const total = totals[totals.length - 1];
+      const a = total && debit && total.values ? total.values[debit.key] : undefined;
+      const b = total && credit && total.values ? total.values[credit.key] : undefined;
+      if (!isNum(a) || !isNum(b)) return { missing: 'Total debits and credits were not returned, so the balance check could not run.' };
+      return { left: 'Total debits', right: 'Total credits', a, b, column: debit };
+    }
+    return null;
+  }
+
+  function state(kind, title, lines = [], code) {
+    const box = el('div', `state state-${kind}`);
+    box.setAttribute('role', kind === 'error' ? 'alert' : 'status');
+    append(box, el('p', 'state-title', title));
+    for (const line of lines) if (line) box.append(el('p', null, line));
+    if (code) box.append(el('p', 'code', `Code: ${code}`));
+    return box;
+  }
+
+  function list(title, items, cls) {
+    const shown = Array.isArray(items) ? items.filter((item) => typeof item === 'string' && item.trim()) : [];
+    if (!shown.length) return null;
+    const section = el('section', cls);
+    const ul = el('ul');
+    for (const item of shown) ul.append(el('li', null, item));
+    return append(section, el('h2', null, title), ul);
+  }
+
+  function renderTable(report) {
+    const { columns, rows } = report;
+    const currency = report.meta.currency;
+    const table = el('table', 'report-table');
+    const head = el('tr');
+    columns.forEach((column, i) => {
+      const th = el('th', i === 0 ? 'label' : 'num', column.title || (i === 0 ? '' : column.key));
+      th.scope = 'col';
+      if (i === 0 && !column.title) th.append(el('span', 'sr-only', 'Line'));
+      head.append(th);
+    });
+    const body = el('tbody');
+    for (const row of rows) {
+      const kind = String(row.kind || 'Data').toLowerCase();
+      const level = Number.isInteger(row.level) && row.level > 0 ? row.level : 0;
+      const tr = el('tr', `row-${kind} level-${Math.min(level, 6)}`);
+      columns.forEach((column, i) => {
+        const value = has(row.values, column.key) ? row.values[column.key] : undefined;
+        const cell = has(row.cells, column.key) && row.cells[column.key] !== null ? row.cells[column.key] : undefined;
+        let text = '';
+        let cls = i === 0 ? 'label' : 'num';
+        if (i === 0) {
+          text = cell !== undefined ? cell : (row.label ?? '');
+        } else if (has(row.values, column.key)) {
+          text = fmtValue(value, column, currency);
+          if (isNum(value) && value < 0) cls += ' neg';
+        } else if (cell !== undefined) {
+          text = cell;
+          cls = 'text';
+        }
+        const td = el(i === 0 ? 'th' : 'td', cls, text);
+        if (i === 0) {
+          td.scope = 'row';
+          td.style.paddingLeft = `${0.5 + level * 1.1}rem`;
+        }
+        tr.append(td);
+      });
+      body.append(tr);
+    }
+    return append(el('div', 'table-wrap'), append(table, append(el('thead'), head), body));
+  }
+
+  function ticks(min, max) {
+    if (min === max) max = min + 1;
+    const raw = (max - min) / 5;
+    const mag = 10 ** Math.floor(Math.log10(raw));
+    const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= raw);
+    const out = [];
+    for (let v = Math.floor(min / step) * step; v <= Math.ceil(max / step) * step + step / 2; v += step) {
+      out.push(Math.round(v / step) * step);
+    }
+    return out;
+  }
+
+  function color(i) {
+    return `var(${PALETTE[i % PALETTE.length]})`;
+  }
+
+  function pointTitle(node, text) {
+    node.append(svg('title', {}, text));
+    return node;
+  }
+
+  function drawVertical(cfg) {
+    const W = 720, H = 360, L = 84, R = 16, T = 16;
+    const B = cfg.categories.length > 6 ? 88 : 56;
+    const all = cfg.series.flatMap((s) => s.values.filter(isNum));
+    const tk = ticks(Math.min(0, ...all), Math.max(0, ...all));
+    const lo = tk[0], hi = tk[tk.length - 1];
+    const y = (v) => T + ((H - T - B) * (hi - v)) / (hi - lo || 1);
+    const band = (W - L - R) / cfg.categories.length;
+    const root = svg('svg', { viewBox: [0, 0, W, H].join(' '), role: 'img', 'aria-label': cfg.title, class: 'chart' });
+    for (const v of tk) {
+      root.append(svg('line', { x1: L, x2: W - R, y1: y(v), y2: y(v), class: 'grid' }));
+      root.append(svg('text', { x: L - 8, y: y(v) + 4, 'text-anchor': 'end', class: 'tick' }, cfg.tick(v)));
+    }
+    const tilt = cfg.categories.length > 6;
+    cfg.categories.forEach((label, i) => {
+      const x = L + band * (i + 0.5);
+      root.append(svg('text', {
+        x, y: H - B + 18, 'text-anchor': tilt ? 'end' : 'middle', class: 'tick',
+        transform: tilt ? `rotate(-35 ${x} ${H - B + 18})` : '',
+      }, label));
+    });
+    root.append(svg('text', { x: 14, y: T + (H - T - B) / 2, 'text-anchor': 'middle', class: 'axis-label', transform: `rotate(-90 14 ${T + (H - T - B) / 2})` }, cfg.yLabel));
+    if (cfg.xLabel) root.append(svg('text', { x: L + (W - L - R) / 2, y: H - 6, 'text-anchor': 'middle', class: 'axis-label' }, cfg.xLabel));
+    if (cfg.kind === 'line') {
+      cfg.series.forEach((s, si) => {
+        let d = '';
+        let pen = false;
+        s.values.forEach((v, i) => {
+          if (!isNum(v)) { pen = false; return; }
+          d += `${pen ? 'L' : 'M'}${(L + band * (i + 0.5)).toFixed(1)} ${y(v).toFixed(1)} `;
+          pen = true;
+        });
+        if (d) root.append(svg('path', { d: d.trim(), class: 'line', style: `stroke:${color(si)}` }));
+        s.values.forEach((v, i) => {
+          if (!isNum(v)) return;
+          root.append(pointTitle(svg('circle', { cx: L + band * (i + 0.5), cy: y(v), r: 3.5, style: `fill:${color(si)}` }), `${s.name} · ${cfg.categories[i]}: ${cfg.fmt(v)}`));
+        });
+      });
+    } else {
+      const width = (band * 0.8) / cfg.series.length;
+      cfg.series.forEach((s, si) => {
+        s.values.forEach((v, i) => {
+          if (!isNum(v)) return;
+          const top = Math.min(y(0), y(v));
+          root.append(pointTitle(svg('rect', {
+            x: L + band * i + band * 0.1 + width * si, y: top, width: Math.max(width - 2, 1),
+            height: Math.max(Math.abs(y(v) - y(0)), 0.5), style: `fill:${color(si)}`,
+          }), `${s.name} · ${cfg.categories[i]}: ${cfg.fmt(v)}`));
+        });
+      });
+    }
+    root.append(svg('line', { x1: L, x2: W - R, y1: y(0), y2: y(0), class: 'zero' }));
+    return root;
+  }
+
+  function drawHorizontal(cfg) {
+    const W = 720, rowH = 26, L = 230, R = 120, T = 8, B = 40;
+    const H = T + B + rowH * cfg.items.length;
+    const all = cfg.items.map((item) => item.value).filter(isNum);
+    const tk = ticks(Math.min(0, ...all), Math.max(0, ...all));
+    const lo = tk[0], hi = tk[tk.length - 1];
+    const x = (v) => L + ((W - L - R) * (v - lo)) / (hi - lo || 1);
+    const root = svg('svg', { viewBox: [0, 0, W, H].join(' '), role: 'img', 'aria-label': cfg.title, class: 'chart' });
+    for (const v of tk) {
+      root.append(svg('line', { x1: x(v), x2: x(v), y1: T, y2: H - B, class: 'grid' }));
+      root.append(svg('text', { x: x(v), y: H - B + 16, 'text-anchor': 'middle', class: 'tick' }, cfg.tick(v)));
+    }
+    root.append(svg('text', { x: L + (W - L - R) / 2, y: H - 6, 'text-anchor': 'middle', class: 'axis-label' }, cfg.xLabel));
+    cfg.items.forEach((item, i) => {
+      const mid = T + rowH * i + rowH / 2;
+      root.append(pointTitle(svg('text', { x: L - 8, y: mid + 4, 'text-anchor': 'end', class: 'tick' }, item.label.length > 34 ? `${item.label.slice(0, 33)}…` : item.label), item.label));
+      if (!isNum(item.value)) {
+        root.append(svg('text', { x: x(0) + 6, y: mid + 4, class: 'value' }, 'not returned'));
+        return;
+      }
+      const left = Math.min(x(0), x(item.value));
+      root.append(pointTitle(svg('rect', { x: left, y: mid - 8, width: Math.max(Math.abs(x(item.value) - x(0)), 0.5), height: 16, style: `fill:${color(0)}` }), `${item.label}: ${cfg.fmt(item.value)}`));
+      root.append(svg('text', { x: Math.max(x(0), x(item.value)) + 6, y: mid + 4, class: 'value' }, cfg.fmt(item.value)));
+    });
+    root.append(svg('line', { x1: x(0), x2: x(0), y1: T, y2: H - B, class: 'zero' }));
+    return root;
+  }
+
+  function chartData(report, spec) {
+    const numeric = report.columns.slice(1).filter((c) => c.type === 'Percent' || MONEY_TYPES.has(c.type)
+      || report.rows.some((r) => has(r.values, c.key)));
+    let columns;
+    if (Array.isArray(spec.columns)) {
+      columns = spec.columns.map((wanted) => {
+        const found = report.columns.find((c) => c.key === wanted);
+        if (!found) throw new Error(`column "${wanted}" is not in the report`);
+        return found;
+      });
+    } else if (spec.type === 'hbar') {
+      columns = [numeric.slice().reverse().find((c) => c.col_key === 'total') || numeric[numeric.length - 1]].filter(Boolean);
+    } else {
+      const periods = numeric.filter((c) => c.col_key !== 'total' && c.key.toLowerCase() !== 'total');
+      columns = periods.length ? periods : numeric;
+    }
+    if (!columns.length) throw new Error('the report has no numeric columns');
+    const pool = report.rows.concat(report.totals || []);
+    let rows;
+    if (Array.isArray(spec.rows)) {
+      rows = spec.rows.map((label) => {
+        const found = pool.find((r) => r.label === label);
+        if (!found) throw new Error(`row "${label}" is not in the report`);
+        return found;
+      });
+    } else {
+      const kind = typeof spec.rows === 'string' ? spec.rows : 'Data';
+      rows = report.rows.filter((r) => (r.kind || 'Data') === kind);
+    }
+    if (!rows.length) throw new Error('there are no rows to chart');
+    return { columns, rows };
+  }
+
+  function renderChart(report, spec) {
+    const figure = el('figure', 'chart-figure');
+    const title = spec.title || `${report.meta.title || 'Report'} chart`;
+    figure.append(el('figcaption', 'chart-title', title));
+    try {
+      const type = spec.type || 'line';
+      if (!['line', 'bar', 'hbar'].includes(type)) throw new Error(`chart type "${type}" is not supported; use line, bar, or hbar`);
+      const { columns, rows } = chartData(report, { ...spec, type });
+      const currency = report.meta.currency;
+      const percent = columns.every((c) => c.type === 'Percent');
+      const fmt = (v) => (percent ? fmtPercent(v) : fmtMoney(v, currency));
+      const tick = (v) => (percent ? fmtPercent(v) : fmtMoney(v, currency, Math.abs(v) < 10 && v !== 0 ? 2 : 0));
+      const unit = spec.y_label || (percent ? 'Percent' : `Amount${currency ? ` (${currency})` : ''}`);
+      const value = (row, column) => (has(row.values, column.key) && isNum(row.values[column.key]) ? row.values[column.key] : null);
+      const name = (column) => column.title || column.key;
+      if (type === 'hbar') {
+        const column = columns[0];
+        let items = rows.map((row) => ({ label: String(row.label ?? ''), value: value(row, column) }));
+        if (spec.sort !== false) items.sort((a, b) => (isNum(b.value) ? b.value : -Infinity) - (isNum(a.value) ? a.value : -Infinity));
+        const total = items.length;
+        if (Number.isInteger(spec.limit) && spec.limit > 0) items = items.slice(0, spec.limit);
+        figure.append(drawHorizontal({ items, fmt, tick, title, xLabel: spec.x_label || `${name(column)}${percent || !currency ? '' : ` (${currency})`}` }));
+        if (items.length < total) figure.append(el('p', 'chart-note', `Showing the top ${items.length} of ${total} rows; the table lists them all.`));
+      } else {
+        const byRows = spec.x === 'rows';
+        const categories = byRows ? rows.map((r) => String(r.label ?? '')) : columns.map(name);
+        const series = byRows
+          ? columns.map((c) => ({ name: name(c), values: rows.map((r) => value(r, c)) }))
+          : rows.map((r) => ({ name: String(r.label ?? ''), values: columns.map((c) => value(r, c)) }));
+        figure.append(drawVertical({
+          kind: type, categories, series, fmt, tick, title, yLabel: unit,
+          xLabel: spec.x_label || (byRows || Array.isArray(spec.columns) ? '' : 'Period'),
+        }));
+        if (series.length > 1) {
+          const legend = el('ul', 'legend');
+          series.forEach((s, i) => {
+            const swatch = el('span', 'swatch');
+            swatch.style.background = color(i);
+            legend.append(append(el('li'), swatch, s.name));
+          });
+          figure.append(legend);
+        }
+      }
+      figure.append(el('p', 'chart-note', 'Hover a point or bar for its exact value. The table lists every returned value; missing values are left out, not drawn as zero.'));
+    } catch (error) {
+      figure.append(state('warn', 'The chart could not be drawn', [`${error.message}.`]));
+    }
+    return figure;
+  }
+
+  function renderReport(report, opts = {}) {
+    const meta = report.meta;
+    const section = el('section', 'report');
+    const facts = el('dl', 'facts');
+    const fact = (term, value) => {
+      if (value) facts.append(append(el('div'), el('dt', null, term), el('dd', null, value)));
+    };
+    const period = periodText(meta.period);
+    fact('Period', opts.periodLabel ? (period ? `${opts.periodLabel} (${period})` : opts.periodLabel) : period);
+    fact('Basis', meta.basis);
+    fact('Currency', meta.currency);
+    fact('Generated', meta.generated_at ? fmtDateTime(meta.generated_at) : '');
+    fact('Fetched', opts.fetchedAt);
+    append(section, append(el('header', 'report-head'), el('h2', null, opts.heading || meta.title || 'Report'), facts));
+    if (meta.no_data === true) {
+      section.append(state('empty', 'No data for this period', [
+        `QuickBooks returned no rows for ${period || 'this period'}${meta.basis ? ` on a ${meta.basis} basis` : ''}.`,
+      ]));
+      return section;
+    }
+    const checks = [];
+    const tie = tieOut(report);
+    if (tie && tie.missing) checks.push(['warn', tie.missing]);
+    else if (tie) {
+      const f = (v) => fmtValue(v, tie.column, meta.currency);
+      const diff = Math.round((tie.a - tie.b) * 100) / 100;
+      checks.push(diff === 0
+        ? ['ok', `${tie.left} (${f(tie.a)}) equals ${tie.right} (${f(tie.b)}).`]
+        : ['warn', `${tie.left} (${f(tie.a)}) and ${tie.right} (${f(tie.b)}) differ by ${f(Math.abs(diff))}, as returned by QuickBooks.`]);
+    }
+    if (isObj(meta.truncated)) {
+      checks.push(['warn', `This is not the complete report: it was cut to fit the size limit, so it shows ${report.rows.length} of ${meta.truncated.rows_available} rows${meta.truncated.cut_at === 'row' ? ', and its last section is partial' : ''}. ${isObj(meta.page) ? 'Its totals cover only this page.' : meta.truncated.totals_available !== undefined ? `It shows only the last ${(report.totals || []).length} of ${meta.truncated.totals_available} totals.` : 'The totals are complete.'}`]);
+    } else if (isObj(meta.page) && meta.page.next_offset !== undefined && meta.page.next_offset !== null) {
+      checks.push(['warn', `This is not the complete report: QuickBooks has more rows after these ${report.rows.length} (next offset ${meta.page.next_offset}). Its totals cover only this page.`]);
+    }
+    if (checks.length) {
+      const ul = el('ul', 'checks');
+      for (const [cls, text] of checks) ul.append(el('li', cls, text));
+      section.append(ul);
+    }
+    const totals = (report.totals || [])
+      .map((row) => ({ label: row.label, total: grandTotal(report.columns, row) }))
+      .filter((item) => item.label && item.total);
+    if (totals.length) {
+      const dl = el('dl', 'key-figures');
+      for (const item of totals) {
+        dl.append(append(el('div', item.total.value < 0 ? 'figure neg' : 'figure'),
+          el('dt', null, item.label), el('dd', null, fmtValue(item.total.value, item.total.column, meta.currency))));
+      }
+      section.append(dl);
+    }
+    if (isObj(opts.chart)) section.append(renderChart(report, opts.chart));
+    section.append(renderTable(report));
+    return section;
+  }
+
+  function ready(fn) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
+    else fn();
+  }
+
+  return { el, append, isObj, isNum, readData, checkReport, fmtDateTime, renderReport, state, list, ready };
+})();
+/* claudebooks:renderer:end */
+
+const CLEARS_DATA = new Set(['server_not_connected', 'needs_reauth', 'not_in_manifest', 'blocked_by_policy', 'approval_required', 'realm_mismatch']);
+
+function payloadOf(result) {
+  if (!CB.isObj(result)) return null;
+  if (CB.isObj(result.payload)) return result.payload;
+  if (typeof result.payload === 'string') {
+    try { return JSON.parse(result.payload); } catch { return null; }
+  }
+  if (CB.isObj(result.structuredContent)) return result.structuredContent;
+  if (Array.isArray(result.content)) {
+    for (const block of result.content.slice().reverse()) {
+      if (!CB.isObj(block) || block.type !== 'text' || typeof block.text !== 'string') continue;
+      try {
+        const parsed = JSON.parse(block.text);
+        if (CB.isObj(parsed)) return parsed;
+      } catch {
+        // Not the JSON block.
+      }
+    }
+  }
+  return null;
+}
+
+function toolErrorOf(result) {
+  return CB.isObj(result) && result.isError === true ? { code: 'tool_error', result } : null;
+}
+
+function describeError(error, company) {
+  const e = CB.isObj(error) ? error : { message: String(error || '') };
+  const code = typeof e.code === 'string' && e.code ? e.code : 'unknown';
+  const name = company || 'this company';
+  switch (code) {
+    case 'mcp_unavailable':
+    case 'not_granted':
+    case 'capability_disabled':
+    case 'capability_removed':
+      return { code, title: 'This view cannot call connectors', lines: ['Live pages need QuickBooks Labs under Settings > Connectors and artifact connectors turned on in Settings > Capabilities.'] };
+    case 'server_not_connected':
+    case 'needs_reauth':
+      return { code, title: 'QuickBooks Labs is not connected for this viewer', lines: ['Add or reconnect QuickBooks Labs under Settings > Connectors, then reload this page.'] };
+    case 'selection_required':
+      return { code, title: 'More than one QuickBooks Labs connector is available', lines: ['Choose one in the prompt, then reload this page.'] };
+    case 'not_in_manifest':
+      return { code, title: 'QuickBooks Labs is turned off for this page', lines: ['Allow QuickBooks Labs for this page, then reload. If it is already allowed, the page called a tool it did not declare, which is a page bug.'] };
+    case 'blocked_by_policy':
+    case 'approval_required':
+      return { code, title: "Your organization's policy blocks this report", lines: [e.message] };
+    case 'realm_mismatch':
+      return { code, title: `This page is for ${name}`, lines: [`QuickBooks Labs answered for a different company. This page shows only ${name}'s books and never switches to your default company.`] };
+    case 'tool_error': {
+      const inner = CB.isObj(e.result) && CB.isObj(e.result.structuredContent) && CB.isObj(e.result.structuredContent.error)
+        ? e.result.structuredContent.error
+        : {};
+      const innerCode = typeof inner.code === 'string' && inner.code ? inner.code : 'unknown';
+      if (innerCode === 'delegation' || innerCode === 'permission') {
+        return {
+          code: `tool_error / ${innerCode}`,
+          clear: true,
+          title: `Your QuickBooks Labs connection does not include ${name}`,
+          lines: [`This page reads only ${name}'s books and never falls back to your default company. Ask for access to ${name}, then reload.`],
+        };
+      }
+      return {
+        code: `tool_error / ${innerCode}`,
+        title: 'QuickBooks Labs could not run this report',
+        lines: [inner.message || e.message, inner.next_action ? `Next step: ${inner.next_action}` : ''],
+      };
+    }
+    default:
+      return { code, title: 'QuickBooks Labs did not return this report', lines: [e.message, 'Use Refresh to try again.'] };
+  }
+}
+
+const FIGURE_KEYS = ['report', 'rows', 'totals', 'values', 'cells'];
+const isReportPayload = (value) => CB.isObj(value) && CB.isObj(value.meta) && (Array.isArray(value.rows) || Array.isArray(value.columns));
+function holdsReport(value) {
+  if (Array.isArray(value)) return value.some(holdsReport);
+  return CB.isObj(value) && (isReportPayload(value) || Object.values(value).some(holdsReport));
+}
+
+function checkChart(chart, where) {
+  if (chart === undefined) return null;
+  if (!CB.isObj(chart)) return `${where} must be an object`;
+  const names = (v) => Array.isArray(v) && v.every((x) => typeof x === 'string');
+  if (chart.rows !== undefined && typeof chart.rows !== 'string' && !names(chart.rows)) return `${where}.rows must be a row kind or a list of row labels`;
+  if (chart.columns !== undefined && !names(chart.columns)) return `${where}.columns must be a list of column keys`;
+  return null;
+}
+
+function checkConfig(cfg) {
+  if (!CB.isObj(cfg)) return 'the configuration is not an object';
+  if (typeof cfg.server !== 'string' || !cfg.server) return '"server" must name the QuickBooks Labs connector';
+  if (typeof cfg.realm_id !== 'string' || !cfg.realm_id) return '"realm_id" must be the pinned company id';
+  if (!Array.isArray(cfg.sections) || cfg.sections.length === 0) return '"sections" must list at least one report';
+  if (FIGURE_KEYS.some((k) => k in cfg)) return 'a live page must not embed report figures';
+  for (const [i, section] of cfg.sections.entries()) {
+    if (!CB.isObj(section) || !CB.isObj(section.request) || typeof section.request.report !== 'string') {
+      return `sections[${i}].request must be a reports_run request with a report`;
+    }
+    const { chart, ...rest } = section;
+    if (FIGURE_KEYS.some((k) => k in rest) || holdsReport(rest)) return `sections[${i}]: a live page must not embed report figures`;
+    const chartProblem = checkChart(chart, `sections[${i}].chart`);
+    if (chartProblem) return chartProblem;
+    if (section.request.realm_id !== undefined && String(section.request.realm_id) !== cfg.realm_id) {
+      return `sections[${i}].request.realm_id differs from the pinned realm_id`;
+    }
+    const rule = section.period_rule;
+    if (rule !== undefined) {
+      if (!CB.isObj(rule) || !Number.isInteger(rule.trailing_months) || rule.trailing_months < 1 || rule.trailing_months > 60) {
+        return `sections[${i}].period_rule.trailing_months must be a whole number from 1 to 60`;
+      }
+      if (rule.through !== undefined && rule.through !== 'today' && rule.through !== 'last_month_end') {
+        return `sections[${i}].period_rule.through must be "today" or "last_month_end"`;
+      }
+    }
+  }
+  if (holdsReport({ ...cfg, sections: [] })) return 'a live page must not embed report figures';
+  return null;
+}
+
+function requestFor(section, realmId, serverDate) {
+  const input = JSON.parse(JSON.stringify(section.request));
+  input.realm_id = realmId;
+  const rule = section.period_rule;
+  if (!rule) return input;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(serverDate || ''));
+  if (!m) throw new Error('company_get_context returned no server_date, so this period cannot be resolved.');
+  const end = rule.through === 'last_month_end'
+    ? new Date(Date.UTC(+m[1], +m[2] - 1, 0))
+    : new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+  const start = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() - (rule.trailing_months - 1), 1));
+  input.period = { start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) };
+  return input;
+}
+
+async function boot() {
+  const app = document.getElementById('app');
+  let cfg;
+  try {
+    cfg = CB.readData('claudebooks-data');
+  } catch (error) {
+    app.replaceChildren(CB.state('error', 'This live page has no readable configuration', [error.message], 'config_unreadable'));
+    return;
+  }
+  const problem = checkConfig(cfg);
+  if (problem) {
+    app.replaceChildren(CB.state('error', 'This live page has an invalid configuration', [`${problem}.`], 'config_invalid'));
+    return;
+  }
+  let company = typeof cfg.company === 'string' ? cfg.company : '';
+  const title = cfg.title || 'QuickBooks live report';
+  document.title = title;
+  const companyEl = CB.el('p', 'company', company);
+  const fetchedEl = CB.el('p', 'fetched', 'Not fetched yet');
+  const refresh = CB.el('button', 'refresh', 'Refresh');
+  refresh.type = 'button';
+  refresh.disabled = true;
+  const header = CB.append(CB.el('header', 'page-head'),
+    CB.append(CB.el('div', 'head-row'),
+      CB.append(CB.el('div'), CB.el('p', 'eyebrow', 'QuickBooks Labs · Live QuickBooks report'), CB.el('h1', null, title), companyEl),
+      refresh),
+    fetchedEl,
+    CB.el('p', 'badge', 'Live: this page reruns the report through your own QuickBooks Labs connection each time it opens. It holds no saved figures.'));
+  const sections = cfg.sections.map((sc, index) => ({
+    sc, index, body: CB.el('div', 'section-body'), key: null, unsub: null, rendered: null, retried: false,
+  }));
+  const headed = (s, box) => CB.append(CB.el('section', 'report'), CB.el('h2', null, s.sc.heading || s.sc.request.report), box);
+  for (const s of sections) s.body.append(headed(s, CB.state('loading', 'Loading from QuickBooks…', [s.sc.period_label])));
+  app.replaceChildren(header, CB.append(CB.el('div', 'sections'), ...sections.map((s) => s.body)));
+  CB.append(app, CB.list('Data-quality notes', cfg.notes, 'notes'));
+
+  let mcp = null;
+  let retryPending = false;
+  const markFetched = (result) => {
+    const stored = CB.isObj(result) && CB.isObj(result.cache) ? result.cache.storedAt : undefined;
+    const when = CB.fmtDateTime(stored ? new Date(stored) : new Date());
+    fetchedEl.textContent = stored ? `Fetched ${when} (saved copy; Refresh gets the latest)` : `Fetched ${when}`;
+    return when;
+  };
+  const showError = (s, error) => {
+    if (CB.isObj(error) && error.retryable === true && !s.retried && mcp) {
+      s.retried = true;
+      s.body.replaceChildren(headed(s, CB.state('loading', 'QuickBooks Labs is not ready yet; retrying once…', [], error.code)), ...(s.rendered ? [s.rendered] : []));
+      if (!retryPending) {
+        retryPending = true;
+        const after = Number(error.retryAfterMs);
+        setTimeout(() => {
+          retryPending = false;
+          Promise.resolve().then(() => mcp.invalidate(cfg.server)).catch((e) => showError(s, e));
+        }, Number.isFinite(after) && after >= 0 ? after : 1500);
+      }
+      return;
+    }
+    const d = describeError(error, company);
+    const box = CB.state('error', d.title, d.lines, d.code);
+    if (d.clear || CLEARS_DATA.has(CB.isObj(error) ? error.code : '') || !s.rendered) {
+      s.rendered = null;
+      s.body.replaceChildren(headed(s, box));
+    } else {
+      s.body.replaceChildren(box, s.rendered);
+    }
+  };
+  const showAll = (error) => sections.forEach((s) => showError(s, error));
+  const watch = (tool, input, handler) => Promise.resolve().then(() => mcp.watchTool(cfg.server, tool, input, handler));
+
+  const onReport = (s, event) => {
+    if (!CB.isObj(event)) return;
+    if (event.type === 'error') { showError(s, event.error); return; }
+    if (event.type !== 'data') return;
+    const failed = toolErrorOf(event.result);
+    if (failed) { showError(s, failed); return; }
+    const report = payloadOf(event.result);
+    const bad = CB.checkReport(report);
+    if (bad) {
+      showError(s, { code: 'unexpected_result', message: `reports_run returned data this page cannot read (${bad}). This is a page bug.` });
+      return;
+    }
+    s.retried = false;
+    s.rendered = CB.renderReport(report, { heading: s.sc.heading, periodLabel: s.sc.period_label, chart: s.sc.chart, fetchedAt: markFetched(event.result) });
+    s.body.replaceChildren(s.rendered);
+  };
+
+  const track = (s, ctx) => {
+    let input;
+    try {
+      input = requestFor(s.sc, cfg.realm_id, ctx.server_date);
+    } catch (error) {
+      showError(s, { code: 'server_date_missing', message: error.message });
+      return;
+    }
+    const key = JSON.stringify(input);
+    if (key === s.key) return;
+    if (typeof s.unsub === 'function') {
+      try { s.unsub(); } catch { /* already gone */ }
+    }
+    s.key = key;
+    s.unsub = null;
+    watch('reports_run', input, (event) => onReport(s, event))
+      .then((unsub) => { s.unsub = unsub; })
+      .catch((error) => {
+        if (s.key === key) s.key = null;
+        showError(s, error);
+      });
+  };
+
+  const onContext = (event) => {
+    if (!CB.isObj(event)) return;
+    if (event.type === 'error') { showAll(event.error); return; }
+    if (event.type !== 'data') return;
+    const failed = toolErrorOf(event.result);
+    if (failed) { showAll(failed); return; }
+    const ctx = payloadOf(event.result);
+    if (!CB.isObj(ctx)) {
+      showAll({ code: 'unexpected_result', message: 'company_get_context returned no JSON. This is a page bug.' });
+      return;
+    }
+    if (ctx.realm_id !== undefined && String(ctx.realm_id) !== cfg.realm_id) { showAll({ code: 'realm_mismatch' }); return; }
+    if (typeof ctx.company_name === 'string' && ctx.company_name) {
+      company = ctx.company_name;
+      companyEl.textContent = company;
+    }
+    markFetched(event.result);
+    for (const s of sections) track(s, ctx);
+  };
+
+  try {
+    mcp = window.claude && typeof window.claude.use === 'function' ? await window.claude.use('mcp') : null;
+  } catch (error) {
+    showAll(CB.isObj(error) && typeof error.code === 'string' ? error : { code: 'mcp_unavailable', message: String((error && error.message) || error) });
+    return;
+  }
+  if (!mcp) {
+    showAll({ code: 'mcp_unavailable', message: 'claude.use("mcp") returned null.' });
+    return;
+  }
+  let contextWatched = false;
+  const watchContext = () => watch('company_get_context', { realm_id: cfg.realm_id }, onContext)
+    .then(() => { contextWatched = true; })
+    .catch((error) => showAll(error));
+  refresh.disabled = false;
+  refresh.addEventListener('click', () => {
+    fetchedEl.textContent = 'Refreshing…';
+    for (const s of sections) s.retried = false;
+    if (!contextWatched) { watchContext(); return; }
+    Promise.resolve().then(() => mcp.invalidate(cfg.server)).catch((error) => showAll(error));
+  });
+  watchContext();
+}
+
+CB.ready(() => {
+  boot().catch((error) => {
+    document.getElementById('app').replaceChildren(CB.state('error', 'This live page stopped', [String((error && error.message) || error)], 'page_error'));
+  });
+});
+</script>
+<script type="application/json" id="claudebooks-data">

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "quickbooks-labs",
+  "displayName": "QuickBooks Labs",
+  "description": "QuickBooks bookkeeping for small businesses: bank feeds, receipts, and reports.",
+  "author": {
+    "name": "Intuit"
+  },
+ "homepage": "https://free.app.intuit.com/quickbooks-labs",
+  "repository": "https://github.com/intuit/intuit-plugins-official/tree/main/plugins/quickbooks-labs",
+  "license": "Apache-2.0",
+  "keywords": [
+    "quickbooks",
+    "accounting",
+    "quickbooks-labs",
+    "mcp"
+  ],
+  "version": "4.8.1",
+  "privacyPolicyUrl": "https://intuit.com/privacy/statement",
+  "supportUrl": "https://quickbooks.intuit.com/learn-support/en-us",
+  "documentationUrl": "https://free.app.intuit.com/quickbooks-labs",
+  "termsOfServiceUrl": "https://intuit.com/legal/terms/en-us/quickbooks/online"
+}
