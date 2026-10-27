@@ -1,6 +1,6 @@
 {
     "name": "quickbooks-labs",
-    "source": "./plugins/claudebooks-plugin",
+    "source": "./plugins/quickbooks-labs",
     "description": "QuickBooks bookkeeping for small businesses: bank feeds, receipts, and reports.",
     "version": "4.8.1",
     "tags": [
