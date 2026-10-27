@@ -16,5 +16,9 @@
     "boon",
     "mcp"
   ],
-  "version": "4.8.0"
+  "version": "4.8.0",
+  "privacyPolicyUrl": "https://intuit.com/privacy/statement",
+  "supportUrl": "https://quickbooks.intuit.com/learn-support/en-us",
+  "documentationUrl": "https://free.app.intuit.com/quickbooks-labs",
+  "termsOfServiceUrl": "https://intuit.com/legal/terms/en-us/quickbooks/online"
 }
