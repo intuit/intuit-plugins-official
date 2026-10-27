@@ -8,7 +8,7 @@
   },
  "homepage": "https://free.app.intuit.com/quickbooks-labs",
   "repository": "https://github.com/intuit/intuit-plugins-official/tree/main/plugins/quickbooks-labs",
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
   "keywords": [
     "quickbooks",
     "accounting",
