@@ -50,6 +50,7 @@ svg.chart{width:100%;height:auto;display:block}
 <script>
 /* claudebooks:renderer:start */
 const CB = (() => {
+  // The SVG XML namespace name that createElementNS requires. It is an identifier, not a page the browser loads.
   const SVG_NS = 'http://www.w3.org/2000/svg';
   const MONEY_TYPES = new Set(['Money', 'Double']);
   const PALETTE = ['--s1', '--s2', '--s3', '--s4', '--s5', '--s6'];
@@ -99,8 +100,8 @@ const CB = (() => {
       if (!isObj(row)) return `${name}[${i}] is not an object`;
       if (row.values !== undefined) {
         if (!isObj(row.values)) return `${name}[${i}].values is not an object`;
-        for (const [key, value] of Object.entries(row.values)) {
-          if (value !== null && !isNum(value)) return `${name}[${i}].values.${key} is not a number or null`;
+        for (const [col, value] of Object.entries(row.values)) {
+          if (value !== null && !isNum(value)) return `${name}[${i}].values.${col} is not a number or null`;
         }
       }
       if (row.cells !== undefined && !isObj(row.cells)) return `${name}[${i}].cells is not an object`;
@@ -286,7 +287,7 @@ const CB = (() => {
     const lo = tk[0], hi = tk[tk.length - 1];
     const y = (v) => T + ((H - T - B) * (hi - v)) / (hi - lo || 1);
     const band = (W - L - R) / cfg.categories.length;
-    const root = svg('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': cfg.title, class: 'chart' });
+    const root = svg('svg', { viewBox: [0, 0, W, H].join(' '), role: 'img', 'aria-label': cfg.title, class: 'chart' });
     for (const v of tk) {
       root.append(svg('line', { x1: L, x2: W - R, y1: y(v), y2: y(v), class: 'grid' }));
       root.append(svg('text', { x: L - 8, y: y(v) + 4, 'text-anchor': 'end', class: 'tick' }, cfg.tick(v)));
@@ -340,7 +341,7 @@ const CB = (() => {
     const tk = ticks(Math.min(0, ...all), Math.max(0, ...all));
     const lo = tk[0], hi = tk[tk.length - 1];
     const x = (v) => L + ((W - L - R) * (v - lo)) / (hi - lo || 1);
-    const root = svg('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': cfg.title, class: 'chart' });
+    const root = svg('svg', { viewBox: [0, 0, W, H].join(' '), role: 'img', 'aria-label': cfg.title, class: 'chart' });
     for (const v of tk) {
       root.append(svg('line', { x1: x(v), x2: x(v), y1: T, y2: H - B, class: 'grid' }));
       root.append(svg('text', { x: x(v), y: H - B + 16, 'text-anchor': 'middle', class: 'tick' }, cfg.tick(v)));
@@ -366,9 +367,9 @@ const CB = (() => {
       || report.rows.some((r) => has(r.values, c.key)));
     let columns;
     if (Array.isArray(spec.columns)) {
-      columns = spec.columns.map((key) => {
-        const found = report.columns.find((c) => c.key === key);
-        if (!found) throw new Error(`column "${key}" is not in the report`);
+      columns = spec.columns.map((wanted) => {
+        const found = report.columns.find((c) => c.key === wanted);
+        if (!found) throw new Error(`column "${wanted}" is not in the report`);
         return found;
       });
     } else if (spec.type === 'hbar') {
