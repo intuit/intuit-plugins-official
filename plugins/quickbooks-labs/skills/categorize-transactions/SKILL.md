@@ -1,6 +1,6 @@
 ---
 name: categorize-transactions
-description: Categorize QuickBooks bank-feed transactions with QuickBooks Labs. Reads the Pending rows of each connected bank or credit-card account with QuickBooks' suggestions, records a category, split, transfer or match for each row it can as proposals on a run card, posts them only after the user's yes, and reports what posted and what is left for the user in the bank feed. Use when the user invokes /categorize-transactions or asks to categorize, sort or post pending bank-feed transactions. For receipts or bills, record-receipts; for reports, create-reports.
+description: Categorize QuickBooks bank-feed transactions with QuickBooks Labs. Reads the Pending rows of each connected bank or credit-card account with QuickBooks' suggestions, records a category, split, transfer or match for each row it can as proposals on a run card, posts them only after the user's yes, and reports what posted and what is left for the user in the bank feed. Use when the user invokes /categorize-transactions or asks to categorize, sort or post pending bank-feed transactions. For reports, create-reports.
 compatibility: Requires the QuickBooks Labs MCP bank-feed tools, including bank_feed_categorize and bank_feed_review.
 ---
 

@@ -1,7 +1,7 @@
 {
   "name": "quickbooks-labs",
-  "version": "4.8.1",
-  "description": "QuickBooks bookkeeping for small businesses: bank feeds, receipts, and reports.",
+  "version": "4.9.2",
+  "description": "QuickBooks bookkeeping for small businesses: bank feeds, reconciliation, and reports.",
   "author": {
     "name": "Intuit"
   },
@@ -12,14 +12,13 @@
     "quickbooks",
     "accounting",
     "quickbooks-labs",
-    "boon",
     "mcp"
   ],
   "skills": "./skills/",
   "interface": {
     "displayName": "QuickBooks Labs",
-    "shortDescription": "QuickBooks bookkeeping for small businesses: bank feeds, receipts, and reports.",
-    "longDescription": "QuickBooks bookkeeping for small businesses: bank feeds, receipts, and reports.",
+    "shortDescription": "QuickBooks bookkeeping for small businesses: bank feeds, reconciliation, and reports.",
+    "longDescription": "QuickBooks bookkeeping for small businesses: bank feeds, reconciliation, and reports.",
     "developerName": "Intuit",
     "category": "Developer Tools",
     "capabilities": [

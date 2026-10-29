@@ -1,6 +1,6 @@
 ---
 name: onboard
-description: Connect bank and card accounts to QuickBooks with QuickBooks Labs, then offer one next job: categorize waiting transactions, reconcile an account to its statement, or run a business health report. Use when the user invokes /onboard or asks to set up, get started, or onboard QuickBooks Labs or their books. This is the guided setup entry point. Outside setup, categorize-transactions, reconcile, or create-reports handles that one job. When the user is finished, it offers a daily or weekly check that reports connection problems and waiting transactions and changes nothing.
+description: "Connect bank and card accounts to QuickBooks with QuickBooks Labs, then offer one next job: categorize waiting transactions, reconcile an account to its statement, or run a business health report. Use when the user invokes /onboard or asks to set up, get started, or onboard QuickBooks Labs or their books. This is the guided setup entry point. Outside setup, categorize-transactions, reconcile, or create-reports handles that one job. When the user is finished, it offers a daily or weekly check that reports connection problems and waiting transactions and changes nothing."
 compatibility: Requires the QuickBooks Labs MCP tools.
 ---
 

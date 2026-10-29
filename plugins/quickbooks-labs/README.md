@@ -46,7 +46,7 @@ See [SETUP.md](SETUP.md) for the full setup walkthrough.
 
 ## Design principles
 
-- **Write only after approval.** Receipts, bills, and categorization each show
+- **Write only after approval.** Categorization and reconciliation each show
   what will change and wait for explicit confirmation before changing QuickBooks.
 - **Stay grounded in QuickBooks.** Reports and summaries use only values returned by the connector.
 - **Connect QuickBooks.** The plugin declares only the QuickBooks Labs connector.
