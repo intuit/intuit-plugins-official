@@ -3,9 +3,12 @@
     "quickbooks-labs": {
       "type": "http",
       "url": "https://mcp-nttf.quickbooks.intuit.com/mcp",
-      "description": "QuickBooks Labs connects Claude to QuickBooks Online core-accounting tools for company context, accounts, contacts, items, transactions, reports, bank-feed review, reconciliation, tax, attachments, recurring templates, and change tracking.",
+      "oauth": {
+        "clientId": "ABnusbYfhzzcVQtD9xb72aPFUvbSscE3zPLJv8c6B4JvAMXcbQ"
+      },
+      "description": "QuickBooks Labs connects Claude to QuickBooks Online to manage the ledger end to end: categorize, match, and post transactions, reconcile accounts, send invoices, record payments, and run accurate reports that surface insights on cash flow and profitability.",
       "headers": {
-        "X-QuickBooks-Labs-Version": "4.8.1"
+        "X-QuickBooks-Labs-Version": "4.9.2"
       }
     }
   }
