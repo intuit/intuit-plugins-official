@@ -1,6 +1,6 @@
 ---
 name: reconcile
-description: Reconcile a QuickBooks bank or credit-card account to its statement with QuickBooks Labs. Picks the account, takes the statement ending date and balance, begins only after a yes to those figures, opens the worksheet when available or ticks lines in chat when it is not, and finishes or reports the result. Use when the user invokes /reconcile or asks to reconcile a bank or card account against a statement, or when /onboard loads it by name.
+description: Reconcile a QuickBooks bank or credit-card account to its statement with QuickBooks Labs. Picks the account, takes the statement ending date and balance, begins only after a yes to those figures, opens the worksheet when available or ticks lines in chat when it is not, and finishes or reports the result. Use when the user invokes /reconcile, /quickbooks-labs:reconcile, or asks to reconcile a bank or card account against a statement, or when /onboard loads it by name.
 compatibility: Requires the QuickBooks Labs MCP reconciliation tools. The worksheet card is optional and used when reconciliation_review is available.
 ---
 
