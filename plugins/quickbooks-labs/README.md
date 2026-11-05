@@ -43,6 +43,7 @@ See [SETUP.md](SETUP.md) for the full setup walkthrough.
 | `connect-bank` | Open connected bank and card feeds, with Connect a bank (slash command only) |
 | `reconcile` | Match a bank or credit-card account to its statement, from the statement figures through a finished session |
 | `create-reports` | Build live or snapshot QuickBooks report Artifacts and graphs, with optional scheduled refreshes |
+| `qb-labs-feedback` | Send feedback about the QuickBooks Labs connector to the team that builds it: a problem, a wrong result, a missing capability, or praise |
 
 ## Design principles
 
