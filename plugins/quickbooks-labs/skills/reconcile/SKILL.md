@@ -1,6 +1,6 @@
 ---
 name: reconcile
-description: Reconcile a QuickBooks bank or credit-card account to its statement with QuickBooks Labs. Picks the account, takes the statement ending date and balance, begins only after a yes to those figures, opens the worksheet when available or ticks lines in chat when it is not, and finishes or reports the result. Use when the user invokes /reconcile, /quickbooks-labs:reconcile, or asks to reconcile a bank or card account against a statement, or when /onboard loads it by name.
+description: Reconcile a QuickBooks bank or credit-card account to its statement with QuickBooks Labs. Picks the account, takes the statement ending date and balance, begins only after a yes to those figures, opens the worksheet when available or ticks lines in chat when it is not, and finishes or reports the result. Use when the user invokes /reconcile or asks to reconcile a bank or card account against a statement, or when /onboard loads it by name.
 compatibility: Requires the QuickBooks Labs MCP reconciliation tools. The worksheet card is optional and used when reconciliation_review is available.
 ---
 
@@ -135,7 +135,8 @@ not load.
 1. Call `reconciliation_list_lines` with `clear_state: "NotCleared"` and `date_to` at the statement
    ending date. Name the lines that appear on the statement.
 2. Call `reconciliation_set_cleared` with those `line_ids` only after the user says yes to that list
-   in a later turn. Prefer `line_ids` over `through_date`.
+   in a later turn. Prefer `line_ids` over `through_date`. When a result lists `remaining`, call
+   again with those `line_ids` without asking again; the user's yes covered them.
 3. Call `reconciliation_get` after each clear batch. Repeat until the difference is 0.00, the user
    cancels, or the user accepts an adjusting entry in section 6.
 

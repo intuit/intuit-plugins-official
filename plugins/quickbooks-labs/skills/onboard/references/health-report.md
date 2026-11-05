@@ -49,8 +49,6 @@ one step in onboarding, not a report request, so:
 ## After the Artifact
 
 Each report is generated, partial, empty or blocked. After showing the Artifact, ask the user to
-review it and say `done` or describe changes, and end the turn. On `done`, return to the next steps
-in `/onboard` and call `onboarding_next_steps` with `last_job` `health_report` before the offer.
-That finished report ranks last, so the offer is the next job. Pass `health_report` again on every
-later checkpoint until a different job hands back. Omitting it after this report offers the
-finished report again when the feeds are clean. This done is not the recurring check.
+review it and say `done` or describe changes, and end the turn. On `done`, return to the next-step
+offer in `/onboard`. Offer `/categorize-transactions`, not this report again. This done is not the
+recurring check.
