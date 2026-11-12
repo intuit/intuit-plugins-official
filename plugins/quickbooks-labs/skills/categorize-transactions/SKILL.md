@@ -50,6 +50,9 @@ categorization unless the user explicitly asks.
 - After two failed or empty first calls, stop: say what came back and one next action. No
   workarounds via other tools, reports or connectors. The chart read in section 4 is the
   exception: it never stops the run.
+- A `permission` error or an `access_denied` answer stops at once, the chart read included: tell
+  the user their QuickBooks role doesn't allow it. For `companyUnreachable`, tell them instead that
+  the signed-in user can't open this company.
 - Call only `company_get_context`, `bank_feed_list_connections`, `bank_feed_list_transactions`,
   `bank_feed_get_match_candidates`, `bank_feed_categorize`, `bank_feed_review`, `bank_feed_run_read`,
   `bank_feed_undo` (only rows the user names), `bank_feed_sync` (only after the user's yes to an
@@ -139,9 +142,10 @@ For one account:
    customer or payment-processor deposit, several categories that fit equally, or no chart
    category that fits. A row like these takes a category, or the other account, only when
    QuickBooks suggested one for rows like it.
-6. The reply says what the `suggested` rows were recorded as; a row you read as a match that came
-   back as categorize or split goes again in `input` with `run_id`. Its `not_recorded` lists rows
-   not recorded and why: rows QuickBooks no longer has Pending, and rows the call itself dropped (an id named twice,
+6. The reply names each `suggested` row's recorded proposal. Compare each label with what you
+   read; a row whose category, split or match differs goes again in `input` with `run_id`.
+   Its `not_recorded` lists rows not recorded and why: rows QuickBooks no longer has Pending,
+   suggestions it could not resolve, and rows the call itself dropped (an id named twice,
    a split or match over several rows, a match_ref that does not fit the row). Everything else
    was recorded, so never resend the whole list: send only the rows listed, fixed, with `run_id`
    (a row named twice goes once, with the action you mean). A call in which more than 50 rows
@@ -151,7 +155,11 @@ For one account:
    `bank_feed_list_transactions { account_id, ids, include_matches: true }`, and propose
    `{ type: "match", targets: [{ match_ref }] }` with the one that fits; several records take a
    `payment_amount` on every target, summing to the row's amount. Put the rest in `left_for_user`
-   with `run_id`. The reply also names rows whose other half another feed holds, a likely transfer:
+   with `run_id`. An open invoice and an undeposited payment for the same customer: propose the
+   payment. The invoice's `caution` says that matching it records a new payment. When every
+   candidate listed for the row is an open invoice, or `invoice_match_note` is set, call
+   `bank_feed_get_match_candidates` once with `date_from` and `date_to`. If the payment is still
+   absent, put the row in `left_for_user`. The reply also names rows whose other half another feed holds, a likely transfer:
    suggested rows it left for the user, rows you left for the user, and categories you chose.
    Decide each before the review: record it again in `input` with `run_id` as `transfer` or
    `card_payment` (a credit card on either side) with that account as `other_account_id`, unless
@@ -201,7 +209,10 @@ A few rows the user names in chat post now, not in a run, with
 
 - **Match:** when the user asks to match a Pending row to an existing record (an invoice, bill,
   payment or posted transaction), call `bank_feed_get_match_candidates` for that row, show the
-  candidate(s) that fit (type, number, date, amount), and ask to match it. On their yes, in a later
+  candidate(s) that fit (type, number, date, amount), and ask to match it. When the list has an open
+  invoice and an undeposited payment for the same customer, show the payment and say that matching
+  the invoice records a new payment. When `invoice_match_note` is set, read once more with `date_from`
+  and `date_to` before you say there is no match. On their yes, in a later
   turn, post `{ type: "match", targets: [{ match_ref }] }` with that candidate's `match_ref`. If no
   candidate fits, say so and leave the row Pending. Never pick a candidate the user did not confirm.
 - **Exclude:** list the rows (date, amount, bank text). A request that names those exact rows and

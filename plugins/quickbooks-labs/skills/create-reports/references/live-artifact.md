@@ -80,6 +80,7 @@ out" section: put observations from this conversation's run in the chat summary,
 | `blocked_by_policy`, `approval_required` | The organization's policy blocks the report |
 | `tool_error / delegation`, `tool_error / permission`, `realm_mismatch` | The viewer's QuickBooks Labs connection does not include this company |
 | `tool_error / <other>` | QuickBooks Labs' message and next action, shown on the page |
+| `access_denied / <reason>` | The viewer's QuickBooks role does not allow this report; a QuickBooks admin can change it in Manage users. Rebuilding the page will not help |
 | `config_invalid`, `config_unreadable`, `unexpected_result`, `server_date_missing`, `page_error` | A page bug (below) |
 
 ## Tell the user

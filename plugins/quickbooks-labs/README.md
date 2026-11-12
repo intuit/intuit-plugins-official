@@ -26,7 +26,8 @@ their own:
    first. QuickBooks Labs installs separately and does not replace it.
 2. Upload the QuickBooks Labs `.plugin` file in **Cowork → Customize → Plugins** and enable **QuickBooks Labs**.
 3. Start a new chat or Cowork task and run `/quickbooks-labs:onboard`. The skills load in a normal chat as well as in Cowork.
-4. Sign in to QuickBooks from the inline **Connect** card.
+4. Sign in to QuickBooks when Claude asks, the first time a step needs your books. In Cowork, that
+   means clicking **Connect** on QuickBooks Labs in your connector settings.
 
 See [SETUP.md](SETUP.md) for the full setup walkthrough.
 
@@ -37,6 +38,7 @@ See [SETUP.md](SETUP.md) for the full setup walkthrough.
 | Skill | Purpose |
 | --- | --- |
 | `onboard` | First-time setup: connect bank and card accounts, then suggest one next step from the state of the books (categorize, reconcile, or a live or snapshot health report), with an optional recurring bank-feed check |
+| `configure` | Run the same setup as `onboard` (slash command only) |
 | `categorize-transactions` | Automatically categorize an approved set of bank-feed transactions, posting proposals only after a yes |
 | `review-bank-feed` | Open the bank feed MCP App (slash command only) |
 | `switch-company` | Open the QuickBooks company picker (slash command only) |
@@ -51,3 +53,9 @@ See [SETUP.md](SETUP.md) for the full setup walkthrough.
   what will change and wait for explicit confirmation before changing QuickBooks.
 - **Stay grounded in QuickBooks.** Reports and summaries use only values returned by the connector.
 - **Connect QuickBooks.** The plugin declares only the QuickBooks Labs connector.
+- **One company per conversation.** On Claude Code and Cowork, a `PreToolUse` hook
+  (`hooks/hooks.json`, a local `node` script) tags each tool call with its conversation so two open
+  chats can work in two QuickBooks companies without crossing. The company card then lets you apply
+  a choice to this conversation only, or set it as your default company. The hook makes no network call and carries no
+  company data; see [SETUP.md](SETUP.md) for what it adds to a call. This is not turned on in
+  production yet: there one company applies to all your conversations.

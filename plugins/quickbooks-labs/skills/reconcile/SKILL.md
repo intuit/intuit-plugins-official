@@ -38,7 +38,8 @@ write for the session: begin, clear, finish, cancel, and undo.
   tell the user what came back and one next action. Do not work around it with other tools,
   reports, or connectors.
 - Call only `company_get_context`, `reconciliation_list_accounts`, `reconciliation_get`,
-  `reconciliation_list_lines`, `reconciliation_history`, `reconciliation_begin`,
+  `reconciliation_list_lines`, `reconciliation_history`, `transactions_search` (only to identify
+  transactions changed after the last session, as section 3 says), `reconciliation_begin`,
   `reconciliation_update`, `reconciliation_set_cleared`, `reconciliation_finish`,
   `reconciliation_cancel`, `reconciliation_undo`, and `reconciliation_review` when that tool is
   available; `bank_feed_list_connections` and `bank_feed_sync` (only after the user's yes to the
@@ -55,8 +56,8 @@ Load the reconciliation tools by their exact names, never by topic words. Make o
 `reconciliation_list_accounts`, `reconciliation_get`, `reconciliation_begin`, and
 `reconciliation_review`, when any is deferred, before the first reconciliation call. These tools
 stay loaded for later turns, including the turn where the user says yes to begin. Load any other
-reconciliation tool, a bank-feed tool, or one that is no longer loaded, the same way in the step
-that calls it.
+reconciliation tool, `transactions_search`, a bank-feed tool, or one that is no longer loaded, the
+same way in the step that calls it.
 
 When that search does not return `reconciliation_get` and `reconciliation_begin`, say
 reconciliation is not available in this connection and stop. When it does not return
@@ -77,6 +78,14 @@ date and ending balance, or the statement itself. End the turn.
 
 Call `reconciliation_get` for the picked `account_id`.
 
+- **`beginning_balance_gap` present:** a reconciled transaction was changed or deleted after the
+  last reconciliation. Before you begin or tick, tell the user the gap and that the new session's
+  difference usually includes it until the change is fixed or an adjusting entry covers it. Find
+  the transactions as the summary says. Name ones updated after the session's `finished_at`, and
+  any history line with `snapshot: true` or whose id `transactions_search` does not return (date,
+  amount, payee). When no such line exists, say the cause is uncertain. Ask whether to fix the gap
+  first. When the user chooses to continue, follow the bullets below and do not repeat the warning
+  for the same gap in this session. End the turn after the warning.
 - **Session in progress:** skip begin. When `reconciliation_review` is available, call it, with
   `statement_lines` as in section 4 when the user attached the statement, and go to section 5. When
   it is not, go to section 5's chat path.
