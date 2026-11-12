@@ -534,7 +534,12 @@ function payloadOf(result) {
 }
 
 function toolErrorOf(result) {
-  return CB.isObj(result) && result.isError === true ? { code: 'tool_error', result } : null;
+  if (!CB.isObj(result)) return null;
+  if (result.isError === true) return { code: 'tool_error', result };
+  const payload = payloadOf(result);
+  return CB.isObj(payload) && typeof payload.access_denied === 'string'
+    ? { code: 'access_denied', reason: payload.access_denied, message: payload.summary }
+    : null;
 }
 
 function describeError(error, company) {
@@ -576,6 +581,15 @@ function describeError(error, company) {
         code: `tool_error / ${innerCode}`,
         title: 'QuickBooks Labs could not run this report',
         lines: [inner.message || e.message, inner.next_action ? `Next step: ${inner.next_action}` : ''],
+      };
+    }
+    case 'access_denied': {
+      const reason = typeof e.reason === 'string' && e.reason ? e.reason : 'unknown';
+      return {
+        code: `access_denied / ${reason}`,
+        clear: true,
+        title: `QuickBooks does not let you see this report in ${name}`,
+        lines: [e.message, ['companyUnreachable', 'notSubscribed'].includes(reason) ? '' : 'A QuickBooks admin can change your role in Manage users.'],
       };
     }
     default:

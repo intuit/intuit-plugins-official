@@ -17,7 +17,9 @@ of every skill and tool. Before you install, open **Cowork → Customize → Plu
 2. In Claude Desktop, open **Cowork → Customize → Plugins**, upload the file, and enable
    **QuickBooks Labs**.
 3. Start a **new** chat or Cowork task. The skills load in a normal chat as well as in Cowork. A
-   conversation that is already open keeps the skill list it started with.
+   conversation that is already open keeps the skill list it started with. If a new chat still
+   does not list the skills or the QuickBooks Labs connector, quit Claude Desktop completely and
+   open it again.
 **For a business owner**
 
 4. Type `/` and confirm these commands are listed:
@@ -30,6 +32,7 @@ of every skill and tool. Before you install, open **Cowork → Customize → Plu
    - `/quickbooks-labs:connect-bank`
    - `/quickbooks-labs:reconcile`
    - `/quickbooks-labs:create-reports`
+   - `/quickbooks-labs:qb-labs-feedback`
 
 If they are missing, or `/claudebooks:` skills are still listed, remove the installed QuickBooks Labs
 plugin and any ClaudeBooks plugin, upload the latest file, restart Claude Desktop, and open another
@@ -38,6 +41,10 @@ installed one keeps the old skills.
 
 The guided workflows come only with the plugin. Connecting the QuickBooks Labs connector on its own
 gives Claude the QuickBooks tools but none of these skills.
+
+**Each seat connects on its own.** A connector belongs to the Claude account that added it. On a
+Team or Enterprise plan, everyone who uses QuickBooks Labs installs the plugin and signs in to
+QuickBooks on their own seat.
 
 **Connect QuickBooks once.** The plugin page lists its own QuickBooks Labs connector, and that row
 reads **Not added** until you add it there, even when QuickBooks Labs is already connected under
@@ -51,6 +58,10 @@ The skills are tested on Sonnet. On Haiku, Claude may skip the steps that load a
 skill's reference files, so choose Sonnet for onboarding.
 
 ## Connect your services
+
+Claude asks you to sign in to QuickBooks the first time a step needs your books. Sign in with the
+Intuit account that has them. In Cowork, Claude asks you to click **Connect** on QuickBooks Labs in
+your connector settings, then ask again.
 
 **For a business owner**
 
@@ -66,6 +77,13 @@ without onboarding, sign in from the Connectors panel, or with `/mcp` in Claude 
 | QuickBooks | `quickbooks-labs` | Yes | Company, accounts, transactions, bank feeds, imports, and reports |
 
 ## Considerations
+
+**Where bank transactions wait in QuickBooks**
+
+Bank and card transactions that are waiting to be categorized are on the **For review** tab of
+**Transactions → Bank transactions** in QuickBooks Online; older QuickBooks menus call that page
+**Banking**. A transaction leaves **For review** once it posts. The ones Claude leaves for you stay
+there.
 
 **Declared connectors**
 
@@ -93,3 +111,37 @@ organization see no data, so share snapshots by public link.
 The `quickbooks-labs` connector ships Intuit's pre-registered OAuth client id, so signing in goes
 straight to the Intuit consent screen instead of registering a new client on each install. No
 client secret is bundled — it is a public client and uses PKCE.
+
+**Per-conversation company (the `PreToolUse` hook)**
+
+Claude does not tell a connector which conversation a tool call belongs to, so without help two
+chats open on two QuickBooks companies would share one company choice. The plugin ships one hook,
+`hooks/hooks.json` with `hooks/pre-tool-use.mjs`, that fixes this on Claude Code and Cowork (a
+normal claude.ai chat ignores plugin hooks and keeps one company per user). Per-conversation
+companies are not turned on in production yet: there the hook still runs, but the connector keeps
+one company per user, as in chat.
+
+- Before each QuickBooks Labs tool call, Claude Code runs the script with `node` on your machine
+  and hands it the hook payload: the conversation `session_id`, the turn's `prompt_id`, the tool
+  name, the tool's arguments, and local context such as `cwd` and `transcript_path`.
+- The script copies only `session_id` and `prompt_id` into the tool call's arguments, as
+  `claude_session_id` and `claude_prompt_id`, and leaves the arguments otherwise unchanged. It
+  makes no network call. The two ids travel inside the tool call, and nothing else from the
+  payload leaves your machine. In Auto mode that rewrite lands after the call was reviewed, so
+  the script allows the rewritten call. In every other permission mode it returns no permission
+  decision, and approval prompts stay as they are.
+- The connector removes the two fields before the tool runs and uses the conversation id only to
+  remember which company this conversation chose, under your own sign-in.
+
+The hook is `onFailure: continue` with a 5 second timeout: without `node`, or if your organization
+limits hooks to managed ones, the tool still runs and the company is chosen per user, as in chat.
+
+Pick a company with `/quickbooks-labs:switch-company`.
+Where per-conversation companies are on, the company card on a conversation the hook keys has one
+checkbox under the list, **Make this my default company in new conversations**. Left clear (the
+default), the choice applies to this conversation only, and it keeps that company even if the
+default changes later. Checked, the choice becomes your default company, used by new conversations
+and by any conversation that has not chosen its own. A conversation that never chose starts on your
+default company and keeps it while other conversations make their own choices; it follows when the
+default changes. In production, and in chat (which has no hook), the card shows no checkbox and a
+choice always sets the default company.

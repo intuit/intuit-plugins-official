@@ -100,7 +100,7 @@ message already says which, such as "set up books for my new business". Ask once
    only answers `sign_in_required` before sign-in, so use `quickbooks_labs_get_started` instead
    ([Signed out](#signed-out)) and skip the rest of this item. When signed in: step 1's ToolSearch
    already loads `company_get_connection_status`; load it then if it is still deferred. Call it
-   once with `onboarding: true`. With no company set, the user's SKU is not known, so it
+   once with `onboarding: true`. With no company set, it
    opens the who-are-you card (`kind: get_started`), which already shows the question and the three choices.
    Write nothing after it, not even a line about the card. When its result has a `request_id`,
    call `onboarding_wait` with it right away and write nothing while it waits: on `chosen`,
