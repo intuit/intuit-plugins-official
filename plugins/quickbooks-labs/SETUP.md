@@ -112,36 +112,7 @@ The `quickbooks-labs` connector ships Intuit's pre-registered OAuth client id, s
 straight to the Intuit consent screen instead of registering a new client on each install. No
 client secret is bundled — it is a public client and uses PKCE.
 
-**Per-conversation company (the `PreToolUse` hook)**
+**Company choice**
 
-Claude does not tell a connector which conversation a tool call belongs to, so without help two
-chats open on two QuickBooks companies would share one company choice. The plugin ships one hook,
-`hooks/hooks.json` with `hooks/pre-tool-use.mjs`, that fixes this on Claude Code and Cowork (a
-normal claude.ai chat ignores plugin hooks and keeps one company per user). Per-conversation
-companies are not turned on in production yet: there the hook still runs, but the connector keeps
-one company per user, as in chat.
-
-- Before each QuickBooks Labs tool call, Claude Code runs the script with `node` on your machine
-  and hands it the hook payload: the conversation `session_id`, the turn's `prompt_id`, the tool
-  name, the tool's arguments, and local context such as `cwd` and `transcript_path`.
-- The script copies only `session_id` and `prompt_id` into the tool call's arguments, as
-  `claude_session_id` and `claude_prompt_id`, and leaves the arguments otherwise unchanged. It
-  makes no network call. The two ids travel inside the tool call, and nothing else from the
-  payload leaves your machine. In Auto mode that rewrite lands after the call was reviewed, so
-  the script allows the rewritten call. In every other permission mode it returns no permission
-  decision, and approval prompts stay as they are.
-- The connector removes the two fields before the tool runs and uses the conversation id only to
-  remember which company this conversation chose, under your own sign-in.
-
-The hook is `onFailure: continue` with a 5 second timeout: without `node`, or if your organization
-limits hooks to managed ones, the tool still runs and the company is chosen per user, as in chat.
-
-Pick a company with `/quickbooks-labs:switch-company`.
-Where per-conversation companies are on, the company card on a conversation the hook keys has one
-checkbox under the list, **Make this my default company in new conversations**. Left clear (the
-default), the choice applies to this conversation only, and it keeps that company even if the
-default changes later. Checked, the choice becomes your default company, used by new conversations
-and by any conversation that has not chosen its own. A conversation that never chose starts on your
-default company and keeps it while other conversations make their own choices; it follows when the
-default changes. In production, and in chat (which has no hook), the card shows no checkbox and a
-choice always sets the default company.
+The QuickBooks company you pick is saved for your sign-in, so every conversation uses it until you
+pick another.

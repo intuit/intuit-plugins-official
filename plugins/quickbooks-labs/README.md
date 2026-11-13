@@ -53,9 +53,3 @@ See [SETUP.md](SETUP.md) for the full setup walkthrough.
   what will change and wait for explicit confirmation before changing QuickBooks.
 - **Stay grounded in QuickBooks.** Reports and summaries use only values returned by the connector.
 - **Connect QuickBooks.** The plugin declares only the QuickBooks Labs connector.
-- **One company per conversation.** On Claude Code and Cowork, a `PreToolUse` hook
-  (`hooks/hooks.json`, a local `node` script) tags each tool call with its conversation so two open
-  chats can work in two QuickBooks companies without crossing. The company card then lets you apply
-  a choice to this conversation only, or set it as your default company. The hook makes no network call and carries no
-  company data; see [SETUP.md](SETUP.md) for what it adds to a call. This is not turned on in
-  production yet: there one company applies to all your conversations.
