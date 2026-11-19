@@ -14,7 +14,9 @@ later turn.
    each run, or the report's dates stay fixed.
 
 The task works from the Artifact this conversation just created. Do not ask the user for it, and
-do not create a task before that Artifact exists.
+do not create a task before that Artifact exists. A report shown in chat or saved as a local file
+has no Artifact, so offer no schedule for it. If the user asks for one, say that each run
+publishes an Artifact, and build one only when they then ask for it.
 
 - **Snapshot:** each run publishes a new version of that snapshot.
 - **Live:** each run creates a separate dated snapshot and leaves the live Artifact unchanged. The

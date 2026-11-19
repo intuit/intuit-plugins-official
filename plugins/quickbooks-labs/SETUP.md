@@ -1,8 +1,7 @@
 # QuickBooks Labs Setup Guide
 
 QuickBooks Labs is a skills plugin. It bundles no local server and no credentials: every tool comes
-from a hosted MCP connector declared in the plugin's `.mcp.json`, and each connector runs its own
-sign-in.
+from a hosted MCP connector declared in the plugin's `.mcp.json`.
 
 ## Install the plugin
 
@@ -43,8 +42,8 @@ The guided workflows come only with the plugin. Connecting the QuickBooks Labs c
 gives Claude the QuickBooks tools but none of these skills.
 
 **Each seat connects on its own.** A connector belongs to the Claude account that added it. On a
-Team or Enterprise plan, everyone who uses QuickBooks Labs installs the plugin and signs in to
-QuickBooks on their own seat.
+Team or Enterprise plan, everyone who uses QuickBooks Labs installs the plugin and adds the
+connector on their own seat.
 
 **Connect QuickBooks once.** The plugin page lists its own QuickBooks Labs connector, and that row
 reads **Not added** until you add it there, even when QuickBooks Labs is already connected under
@@ -59,9 +58,7 @@ skill's reference files, so choose Sonnet for onboarding.
 
 ## Connect your services
 
-Claude asks you to sign in to QuickBooks the first time a step needs your books. Sign in with the
-Intuit account that has them. In Cowork, Claude asks you to click **Connect** on QuickBooks Labs in
-your connector settings, then ask again.
+Follow the QuickBooks Labs connector's guidance to get started.
 
 **For a business owner**
 
@@ -69,8 +66,7 @@ Run `/quickbooks-labs:onboard`. After QuickBooks is connected, it shows a connec
 The card lists the bank and card accounts that already feed QuickBooks. With none connected,
 that list is omitted and the card explains why to connect a bank. The connect button is Connect Securely. The link itself happens in
 QuickBooks in your browser.
-Onboarding then offers one next step: categorize, reconcile, or a health report. To connect
-without onboarding, sign in from the Connectors panel, or with `/mcp` in Claude Code.
+Onboarding then offers one next step: categorize, reconcile, or a health report.
 
 | Connector | `.mcp.json` server | Required | Used for |
 | --- | --- | --- | --- |
@@ -103,16 +99,14 @@ plugin's `.mcp.json` servers, so live reports need:
 - **AI-powered artifacts** turned on under **Settings → Capabilities → Visuals**.
 
 Without all three, the skill builds a snapshot and says what would make it live. Live Artifacts can be
-shared inside a Team or Enterprise organization; viewers who open a public link from outside the
-organization see no data, so share snapshots by public link.
+shared inside a Team or Enterprise organization; viewers outside the organization see no data.
 
-**QuickBooks sign-in**
+**Reports without Artifacts**
 
-The `quickbooks-labs` connector ships Intuit's pre-registered OAuth client id, so signing in goes
-straight to the Intuit consent screen instead of registering a new client on each install. No
-client secret is bundled — it is a public client and uses PKCE.
+To keep a report off hosted pages, ask for it as a table in chat or as a local file. The skill then
+publishes nothing. When Artifacts are turned off, reports appear in chat.
 
 **Company choice**
 
-The QuickBooks company you pick is saved for your sign-in, so every conversation uses it until you
+The QuickBooks company you pick is saved for your account, so every conversation uses it until you
 pick another.

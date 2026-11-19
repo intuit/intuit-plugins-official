@@ -13,8 +13,9 @@ card** (call it that to the user), post after the user's yes, and report.
 
 - Recording proposals (`bank_feed_categorize { account_id, input }`) and opening or refreshing the
   run card write nothing to QuickBooks, so they need no approval.
-- Post a run (`post: true`) only after the user saw its run card and said yes to posting, in a later
-  turn. A request to categorize, or a yes to another step, is not a yes to posting.
+- Post a run (`post: true`) only after the user saw its run card (where it cannot show, the chat
+  list in [Without the run card](#without-the-run-card)) and said yes to posting, in a later turn. A
+  request to categorize, or a yes to another step, is not a yes to posting.
 - A few rows the user names in chat post now instead (section 7), after their yes to those rows.
 - A run holds one account: categorize one account at a time.
 - Stay inside the accounts and filters the user gave.
@@ -25,7 +26,8 @@ card** (call it that to the user), post after the user's yes, and report.
 
 A rule tells QuickBooks what to do with every feed row that matches a pattern. Rules are for
 patterns the user can identify in their transactions; do not create one for a one-off
-categorization unless the user explicitly asks.
+categorization unless the user explicitly asks. A correction on a repeating payee is a pattern:
+offer it once, after posting ([Saving a correction](#saving-a-correction)).
 
 - A rule matches on payee text, raw bank text or amount, and on money in or out. Nothing else:
   not dates, not how often. Match what the bank actually sends, not what the user calls it.
@@ -48,17 +50,17 @@ categorization unless the user explicitly asks.
 - Posting one call at a time until `state` is `done` is progress, not polling. Never call a tool on
   a timer.
 - After two failed or empty first calls, stop: say what came back and one next action. No
-  workarounds via other tools, reports or connectors. The chart read in section 4 is the
-  exception: it never stops the run.
-- A `permission` error or an `access_denied` answer stops at once, the chart read included: tell
-  the user their QuickBooks role doesn't allow it. For `companyUnreachable`, tell them instead that
-  the signed-in user can't open this company.
+  workarounds via other tools, reports or connectors. The chart read in section 4 can continue
+  after other failures, as described there.
+- A `permission` error or an `access_denied` answer stops at once, the chart read and named-account
+  lookups included: tell the user their QuickBooks role doesn't allow it. For `companyUnreachable`,
+  tell them instead that the signed-in user can't open this company.
 - Call only `company_get_context`, `bank_feed_list_connections`, `bank_feed_list_transactions`,
   `bank_feed_get_match_candidates`, `bank_feed_categorize`, `bank_feed_review`, `bank_feed_run_read`,
   `bank_feed_undo` (only rows the user names), `bank_feed_sync` (only after the user's yes to an
   offer in section 2), `bank_feed_check_posting_status`, `accounts_search` (only to read the chart
-  in section 4), and for rules `bank_feed_list_rules`, `bank_feed_create_rule` and
-  `bank_feed_update_rule`.
+  in section 4 or to look up an account the user names), and for rules `bank_feed_list_rules`,
+  `bank_feed_create_rule` and `bank_feed_update_rule`.
 - Do not load other skills.
 
 ## 1. Check capabilities
@@ -76,11 +78,17 @@ again before posting.
 
 ## 2. Find accounts
 
-Call `bank_feed_list_connections`. No feed accounts: suggest connecting a bank or card; stop. Every
+Call `bank_feed_list_connections`. A `skipped` account is connected but unread: if any is
+`transient`, list once more, then name each still skipped (`name`, else `account_id`) and go on
+with the listed accounts. With none listed, stop there and give one next action. No feed accounts
+and none skipped: suggest connecting a bank or card; stop. Name any account with `needs_attention` and link its `reconnect_url` for the user to open in their
+own browser: with `reconnect_kind` bank_sign_in, to sign in to the bank again; with quickbooks_fix,
+QuickBooks' Banking page, where Fix now shows the step. Wait for their reply. Never open a bank
+sign-in or QuickBooks' Fix now with browser tools.
+Every
 `pending_count` confirmed zero: nothing to categorize; stop, unless the user asked for a rule
 outright: a rule needs no Pending rows, so draft it (Bank rules section) and create it after their yes.
 Missing counts are unknown, not zero.
-Name any account with `needs_attention`.
 
 For an account on a live bank link (`connection_type` Regular, OAuth or DirectFeed): when the user
 expects rows that are not Pending, or its `last_updated` is more than a day old, offer once to update
@@ -118,8 +126,8 @@ For one account:
    each `next_cursor`. One run takes at most 1,000 rows. Before the first record call, read the
    chart's categories once: `accounts_search { types: ["Income", "Other Income", "Cost of Goods
    Sold", "Expense", "Other Expense"], limit: 500 }`, then each `next_cursor`. A chart read that
-   fails twice does not stop the run: record the `suggested` rows as usual and put the rows that
-   would need a chart category in `left_for_user`.
+   fails twice without `permission` or `access_denied` does not stop the run: record the
+   `suggested` rows as usual and put the rows that would need a chart category in `left_for_user`.
 2. Record each read's rows before the next read: `bank_feed_categorize { account_id, suggested,
    input, left_for_user }` the first time, which returns `run_id`, then the same with `run_id`. Name
    each row of the read once, in one of the three lists.
@@ -127,21 +135,40 @@ For one account:
    payee, its split lines, or a suggested match. List their ids only; the server records the
    suggestion itself, and for a match the one record at the row's amount. Never a row whose
    suggestion is QuickBooks' uncategorized default (`generic_default`), a catch-all such as Ask My
-   Accountant, or the feed account itself.
+   Accountant, or the feed account itself. Rows covered by a user-named account go to step 4
+   instead, even when a suggestion fits.
 4. `input`: rows you decide yourself, one entry per action, `{ action, txn_ids }`, with every row
    that takes it. A row with no fitting suggestion, including QuickBooks' uncategorized default,
    takes the category its bank text makes clear (`categorize`): the one QuickBooks suggested for
    rows like it, else one from the chart read: an income category for money in, an expense
-   category for money out. Never a catch-all such as Uncategorized or Ask My Accountant, the feed
-   account, or an id neither showed. A suggested transfer or card payment takes
-   `{ other_account_id }` when the suggestion names the other bank or card account.
+   category for money out. Never a catch-all such as Uncategorized or Ask My Accountant, or the
+   feed account. Use only ids from the suggestions, chart read or named-account lookup below.
+   A suggested transfer or card payment takes `{ other_account_id }` when the suggestion names
+   the other bank or card account.
+   Leave `payee_id` out to keep the payee QuickBooks suggests for the row: the server records it,
+   and the reply names those rows. Give another contact id only when the bank text or the user
+   names a different payee, and `payee_id: null` only when the user wants no payee.
+   **An account the user names for these rows:** `accounts_search { text: <their words> }` once,
+   without `types` or `classification`. Use the one whose name or full account path matches;
+   ask when several do, and say when none returned matches. Relevance alone is not a name match.
+   Do not substitute a suggestion or chart category while that choice is unresolved.
+   The feed account and catch-alls such as Uncategorized or Ask My Accountant never qualify,
+   even when the user names them: ask for a specific posting category instead.
+   Equity, loan and asset accounts (such as Owner's Draw or Inventory Asset) take `categorize`
+   with that `category_id`. Bank-to-bank movements take `transfer`. With a card on either side,
+   use `card_payment` with `other_account_id` only for money out of a bank to a card or money into
+   a card from a bank.
+   If the named accounts and direction do not fit, ask instead. A/R or A/P: offer a match to the
+   existing invoice, bill or payment instead; do not categorize directly to either account.
+   Never independently choose a balance-sheet category the user did not name; fitting QuickBooks
+   suggestions in step 3 and the transfer checks in step 6 still apply. Never create an account.
 5. `left_for_user`: every other row, so the card counts it as Left for you and it stays Pending:
    bank text that names a person or no business (such as a Zelle or Venmo to a name), a payee that
    bills for more than one kind of cost (such as a payroll provider's wages, taxes and fees), a
    refund or reversal of a purchase, a transfer or card payment (such as PAYMENT THANK YOU), a
    customer or payment-processor deposit, several categories that fit equally, or no chart
    category that fits. A row like these takes a category, or the other account, only when
-   QuickBooks suggested one for rows like it.
+   QuickBooks suggested one for rows like it, or the user named one resolved by step 4's lookup.
 6. The reply names each `suggested` row's recorded proposal. Compare each label with what you
    read; a row whose category, split or match differs goes again in `input` with `run_id`.
    Its `not_recorded` lists rows not recorded and why: rows QuickBooks no longer has Pending,
@@ -172,15 +199,47 @@ For one account:
 7. Then `bank_feed_review { run_id }` once, and one line: rows proposed, rows left for the user, rows
    not recorded and why, and that proposals post only after their yes. Ask them to review. Do not
    list groups; the card shows them. `unsupported`: say runs are unavailable here; stop.
+   Without the card, list them instead (see [Without the run card](#without-the-run-card)).
+
+### Without the run card
+
+The run card is unavailable when this host cannot show cards (Claude Code in a terminal), or once
+the user says the run card did not appear. Then every `bank_feed_review { run_id }` above and in
+sections 5 and 6 is still called (it records that the proposals were shown), and after it the chat
+shows what the card would, from that result, with no txn ids:
+
+- One line per group: its label, row count and total, and its `post_counts` (such as 3 billable,
+  1 with no payee).
+- Under it, the group's `sample` rows: date, amount and bank text, with the row's `detail` (its
+  split lines or the record it matches) and its `posts` (payee, customer or project, billable,
+  class, location). A split or match group with more rows than its sample: list the rest with
+  `bank_feed_run_read { run_id, group }` (follow `listed.next_cursor`), so every split and matched
+  record is shown before the yes.
+- With `more_groups`, how many groups the result leaves out. Never write labels, counts or totals
+  for them.
+- `rows.unproposed` as the rows left for the user, then the rows not recorded and why from the
+  latest `bank_feed_categorize` reply in this conversation. With no such reply (a resumed run),
+  leave rows not recorded out.
+
+That list stands in for the card in sections 5 and 6, and a yes to it is the posting yes. To change
+some rows of a group, list them with `bank_feed_run_read { run_id, group }` as section 5 says.
+
+Read [Classes and locations](references/classes-and-locations.md) before the first record call
+when a step 1 read carries `class_location`.
 
 ## 5. Changes and the posting yes
 
-Changes: `bank_feed_categorize { account_id, run_id, input }` with the changed rows, then
+Changes: resolve an account the user names by section 4 step 4 first. Then
+`bank_feed_categorize { account_id, run_id, input }` with the changed rows, then
 `bank_feed_review { run_id }`, then ask again: a changed proposal posts only once the card has shown
-it. A whole group, or some of its rows: `bank_feed_run_read { run_id, group }` lists their `txn_ids`
+it. A changed category keeps the row's payee: leave `payee_id` out unless the user names another
+payee or none. A whole group, or some of its rows: `bank_feed_run_read { run_id, group }` lists their `txn_ids`
 (follow `listed.next_cursor`); show the rows and send the picked ones. Never guess ids. To leave rows
 out, send their `txn_ids` in `left_for_user` with `{ account_id, run_id, left_for_user }`: they lose
 their proposal, stay Pending and count as Left for you. A yes before a change does not cover it.
+
+Note each payee whose category the user changes, with its bank text and new category, for
+[Saving a correction](#saving-a-correction). Do not offer or mention a rule here.
 
 Only an explicit yes to posting the card's proposals counts. A bare yes to a two-option question is
 ambiguous: ask which.
@@ -207,6 +266,12 @@ stop calling; posted rows stay.
 A few rows the user names in chat post now, not in a run, with
 `bank_feed_categorize { account_id, input, post: true }`: one result per row.
 
+- **Categorize, transfer or card payment:** resolve an account the user names by section 4 step 4.
+  Show the rows and resolved account, ask, and only on their yes in a later turn post those rows
+  with the resolved action. Do not start a run for them or post on the request that supplied the name.
+  Posting now sends exactly the payee given: pass each row's suggested payee (`suggestion.payee.id`)
+  as `payee_id` unless the user names another or none, and show it when you ask. The reply names
+  rows posted with no payee; tell the user.
 - **Match:** when the user asks to match a Pending row to an existing record (an invoice, bill,
   payment or posted transaction), call `bank_feed_get_match_candidates` for that row, show the
   candidate(s) that fit (type, number, date, amount), and ask to match it. When the list has an open
@@ -229,26 +294,14 @@ If a run is open, then `bank_feed_review { run_id }` so the card reflects it. A 
 an exclude: it went through; Pending: it did not post; unconfirmed: QuickBooks did not return the
 row. Tell the user, and never post the rows again on your own.
 
+A category the user names here over a different suggestion is a correction too
+([Saving a correction](#saving-a-correction)).
+
 ## When another workflow loads this skill
 
-`/onboard` loads this skill by name for its categorize job. When a workflow loads it:
-
-- Caller overrides win, from the Skill tool's `args` (`entry: "connected"`, `realm_id`, `accounts`
-  from its latest feed read, which replace the section 2 call) or the caller's instructions. Overrides
-  can skip or narrow steps, never the approval rule for posting.
-- A yes to the caller's offer starts section 3 for the accounts the offer named, else the `accounts`
-  passed. The run card and posting yes still happen here. Skip the completion response's continue
-  question: report `remaining` instead. No reports or scheduling.
-- Instead of the completion response or next steps of your own, go back to the caller's next step
-  in the same reply. Do not write out the hand-back or say you are handing back.
-- The hand-back the caller reads:
-  - `categorization`: unavailable, proposed but not posted, or per account the posted, failed and
-    unconfirmed counts from the run card after the last posting call;
-  - `left_for_user` and `unconfirmed`: rows left Pending with no proposal, and rows whose posting
-    QuickBooks never confirmed;
-  - `remaining`: Pending rows of those accounts no run took (past the 1,000 one run takes), so the
-    caller can offer to continue; and
-  - `next_action`: one step for the user when a run did not finish.
+`/onboard` loads this skill by name for its categorize job. Read
+[Loaded by a workflow](references/loaded-by-a-workflow.md) first when one loads it: its overrides
+and hand-back. Overrides never change the approval rule for posting.
 
 ## Completion response
 
@@ -260,3 +313,21 @@ If an account held more Pending rows than one run takes, end with one question, 
 > Continue categorizing the remaining 1,240 transactions in Checking?
 
 Yes → another run, same account and limits, same card and posting yes. Otherwise end with the report.
+
+### Saving a correction
+
+A correction is a category the user changed, from QuickBooks' suggestion or your proposal. Offer
+to save it as a rule when all hold:
+
+- Its rows posted and no run is open. An AutoAdd rule created earlier would post rows the run holds.
+- Two or more rows carry that bank text, in the run or the Pending rows read.
+- `bank_feed_list_rules` shows no rule covering it, and you have not offered it in this conversation.
+
+When one does not hold, say nothing about rules for that payee, not even that you made no rule.
+
+Offer once, after the report and before a continue question: the bank text, this account and
+direction, the corrected category, and how many Pending rows match now. Ask which kind: Standard
+suggests the category on future rows; AutoAdd posts them unreviewed, matching Pending rows
+included. Call `bank_feed_create_rule` only after their yes, in a later turn, with this account in
+`account_ids`, and never while a run is open: if one opened since the offer, ask to post or finish
+it first. A no is final.

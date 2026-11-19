@@ -1,14 +1,14 @@
 ---
 name: reconcile
 description: Reconcile a QuickBooks bank or credit-card account to its statement with QuickBooks Labs. Picks the account, takes the statement ending date and balance, begins only after a yes to those figures, opens the worksheet when available or ticks lines in chat when it is not, and finishes or reports the result. Use when the user invokes /reconcile or asks to reconcile a bank or card account against a statement, or when /onboard loads it by name.
-compatibility: Requires the QuickBooks Labs MCP reconciliation tools. The worksheet card is optional and used when reconciliation_review is available.
+compatibility: Requires the QuickBooks Labs MCP reconciliation tools. The worksheet card is optional and used when reconciliation_review is available and the host shows cards.
 ---
 
 # Reconcile an account
 
 Match one bank or credit-card register to its statement until the difference is 0.00, then finish
 the session. Reading and the worksheet card change nothing until a write. This skill owns every
-write for the session: begin, clear, finish, cancel, and undo.
+write for the session: begin, clear, record a missing statement item, finish, cancel, and undo.
 
 ## Ground rules
 
@@ -21,7 +21,7 @@ write for the session: begin, clear, finish, cancel, and undo.
   `reconciliation_get` to read progress; do not call `reconciliation_set_cleared`,
   `reconciliation_finish`, or `reconciliation_cancel` from chat. The one exception is lines the
   worksheet could not load, in section 5.
-- When `reconciliation_review` is unavailable, this skill ticks and finishes in chat, with the
+- When the worksheet is unavailable (section 1), this skill ticks and finishes in chat, with the
   approvals in sections 5 and 6.
 - Call `reconciliation_finish` with `adjusting_entry` only after the user says yes to that
   discrepancy in a later turn. Call `reconciliation_undo` only after the user names the finished
@@ -43,7 +43,8 @@ write for the session: begin, clear, finish, cancel, and undo.
   `reconciliation_update`, `reconciliation_set_cleared`, `reconciliation_finish`,
   `reconciliation_cancel`, `reconciliation_undo`, and `reconciliation_review` when that tool is
   available; `bank_feed_list_connections` and `bank_feed_sync` (only after the user's yes to the
-  offer in section 4); plus ToolSearch to load them as section 1 says. Never wait on a timer or poll.
+  offer in section 4); `contacts_search`, `transactions_search_lines`, `accounts_search` and
+  `transactions_create`, only to record a missing statement item (section 5); plus ToolSearch to load them as section 1 says. Never wait on a timer or poll.
 - Do not load other skills.
 
 ## 1. Check capabilities
@@ -56,13 +57,17 @@ Load the reconciliation tools by their exact names, never by topic words. Make o
 `reconciliation_list_accounts`, `reconciliation_get`, `reconciliation_begin`, and
 `reconciliation_review`, when any is deferred, before the first reconciliation call. These tools
 stay loaded for later turns, including the turn where the user says yes to begin. Load any other
-reconciliation tool, `transactions_search`, a bank-feed tool, or one that is no longer loaded, the
-same way in the step that calls it.
+reconciliation tool, `transactions_search`, a bank-feed tool, a tool that records a missing item, or
+one that is no longer loaded, the same way in the step that calls it.
 
 When that search does not return `reconciliation_get` and `reconciliation_begin`, say
-reconciliation is not available in this connection and stop. When it does not return
-`reconciliation_review`, use the chat path in section 5. Never tell the user to begin the session
-in QuickBooks.
+reconciliation is not available in this connection and stop. Never tell the user to begin the
+session in QuickBooks.
+
+The worksheet is available when that search returns `reconciliation_review` and this host can show
+cards. Claude Code in a terminal cannot show cards, so there the worksheet is unavailable. When the
+user says the worksheet did not appear, it is unavailable for the rest of the session. Without the
+worksheet, do not call `reconciliation_review`, and use the chat path in section 5.
 
 ## 2. Pick the account
 
@@ -86,7 +91,7 @@ Call `reconciliation_get` for the picked `account_id`.
   amount, payee). When no such line exists, say the cause is uncertain. Ask whether to fix the gap
   first. When the user chooses to continue, follow the bullets below and do not repeat the warning
   for the same gap in this session. End the turn after the warning.
-- **Session in progress:** skip begin. When `reconciliation_review` is available, call it, with
+- **Session in progress:** skip begin. When the worksheet is available, call `reconciliation_review`, with
   `statement_lines` as in section 4 when the user attached the statement, and go to section 5. When
   it is not, go to section 5's chat path.
 - **No session:** when the user has not given the statement ending date and the statement ending
@@ -106,7 +111,7 @@ Call `reconciliation_begin` only after the user says yes to that list in a later
 figures as shown. A `conflict` result means a session is already open: call `reconciliation_get`,
 then open the worksheet or continue in chat; do not begin again.
 
-When `reconciliation_review` is available, call it right after a successful begin. When the user
+When the worksheet is available, call `reconciliation_review` right after a successful begin. When the user
 attached the statement, pass every transaction on it, in statement order, as `statement_lines`, so
 the expanded card shows the statement beside the QuickBooks lines; the tool description gives the
 sign.
@@ -138,7 +143,7 @@ When the user wants to change the statement date or balance, show the new figure
 
 ### Chat path
 
-Use this path only when `reconciliation_review` is unavailable, or for the lines a worksheet could
+Use this path only when the worksheet is unavailable (section 1), or for the lines a worksheet could
 not load.
 
 1. Call `reconciliation_list_lines` with `clear_state: "NotCleared"` and `date_to` at the statement
@@ -149,6 +154,26 @@ not load.
 3. Call `reconciliation_get` after each clear batch. Repeat until the difference is 0.00, the user
    cancels, or the user accepts an adjusting entry in section 6.
 
+### Record a missing statement item
+
+Use this when the user asks to record a statement item that no QuickBooks line matches, other
+than the service charge or interest earned that `reconciliation_begin` takes.
+
+1. Find the payee with `contacts_search`. Read the lines of its past transactions with one
+   `transactions_search_lines` call: its `contact_id`, `basis: "Accrual"` and the 12 months
+   before the statement ending date. Each row names its account; leave out the rows on bank,
+   card, Accounts Receivable, Accounts Payable, Undeposited Funds and sales-tax accounts.
+2. Count the transactions on each account, and use the account that most of them use. When the latest ones use another
+   account, name both accounts, with how many transactions use each, and say which you chose.
+   With no past transactions, use the closest active account from `accounts_search`. Never create
+   an account; when nothing fits, ask.
+3. Show one line for each item: the statement date, the payee, the amount, money in or out of the
+   reconciled account, and the account. Call `transactions_create` only after the user says yes to
+   that list in a later turn. The request to record missing items is not that yes: the items and
+   their accounts are settled after it.
+4. Then go back to the path in use: on the worksheet, the user ticks the new lines; in chat, list
+   them in step 1.
+
 ## 6. Finish, cancel, or report
 
 - **Worksheet path, user replies `done`:** call `reconciliation_get` once. Report finished, still in
@@ -158,7 +183,7 @@ not load.
 - **Chat path, difference 0.00:** show the account and statement figures and ask whether to finish.
   Call `reconciliation_finish` only after yes in a later turn.
 - **Chat path, non-zero difference:** investigate missing or duplicate lines before any adjusting
-  entry. Show the difference and the default adjusting account from `reconciliation_get`. Call
+  entry, and record a missing item only as section 5 says. Show the difference and the default adjusting account from `reconciliation_get`. Call
   `reconciliation_finish` with `adjusting_entry` only after the user says yes to posting that
   discrepancy in a later turn, and pass the difference they said yes to as `expected_difference`.
   On `conflict` the difference moved: read `reconciliation_get` again and ask again.
@@ -166,7 +191,9 @@ not load.
   the chat path call `reconciliation_cancel` after they say yes in a later turn. Cancelling leaves
   Cleared ticks in place.
 - **Undo a finished session:** only when the user asks. Call `reconciliation_history` for the
-  account, name the session, and call `reconciliation_undo` only after yes in a later turn.
+  account, name the session, and call `reconciliation_undo` with its returned `id` as
+  `reconciliation_session_id` only after yes in a later turn. For one session’s history, pass
+  that same `reconciliation_session_id`; `last.session_id` in status is a result field.
 
 ## When another workflow loads this skill
 
