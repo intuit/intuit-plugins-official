@@ -14,7 +14,8 @@ reporting run in the skills it loads.
 
 Talk about the company: its name, an account that needs a fix, what is waiting, and the one next
 action. With accounts, the connection status card already shows balances and Connect Securely.
-With none, it shows one connect pitch and Connect Securely. Do not repeat that copy.
+With none, it shows one connect pitch and Connect Securely. Do not repeat that copy while the card
+shows ([Without cards](#without-cards) writes it instead).
 
 - First `/onboard` turn: write the welcome, then run the company check (step 1). Ask the who-are-you question (step 0) only when that check finds no company or several, nobody is signed in (`sign_in_required`), or QuickBooks Labs is not connected.
 - After a card that ends the turn, write nothing: no sentence that repeats its question or points at it.
@@ -26,9 +27,9 @@ omitted argument stays out of the chat. Continue at the next call.
 Securely ("I connected Business checking."), answers yes or no to the offer, or uses Start or a job link on the onboarding card ("Yes, start
 /categorize-transactions."). A card on screen is not a reply.
 - One checkpoint per turn. On the connection status turn, `company_get_connection_status` with
-`onboarding: true` is the final tool call, unless its `onboarding` result has a `request_id`: then
+`onboarding: true` is the final tool call, unless its `onboarding` result has a `request_id` and cards show ([Without cards](#without-cards)): then
 call `onboarding_wait` with it and the `realm_id` that result names right away and write nothing while it waits. On `bank_linked`,
-write nothing and call it again with the same `request_id` and `realm_id`; on `bank_skipped`, the wait has ended: write the [file ask](#skipped-bank) and end the turn; on `task_started`, start that job in this turn as the user's yes;
+write nothing and call it again with the same `request_id` and `realm_id`. Skip keeps the request waiting for Start; the card unlocks the health report and shows optional statement-upload guidance, so write nothing. On `task_started`, start that job in this turn as the user's yes;
 on `waiting`, repeat the call the same way; on `expired`, end the turn without text. Each wait
 returns within 45 seconds and the request expires 10 minutes after the card opened, so the
 repeats always end in `expired` if the user does nothing. It opens the onboarding card, which already shows the
@@ -71,6 +72,18 @@ Start the first `/onboard` turn with the welcome.
 6. When the user is finished, offer the recurring check (step 3). A finished health report returns
   to step 2 first. It does not skip to this check.
 
+## Without cards
+
+Cards do not show when this host cannot show them (Claude Code in a terminal), or once the user
+says a card did not appear. Then "its card does not show" holds for every card below, and:
+
+- **Who-are-you:** ask with step 0's picker (item 2) instead of the card, signed in or signed out.
+- **Connection status:** step 1's connection status calls, then the reply step 1 gives for a host
+  that cannot paint the card. A typed reply that a bank is linked runs those calls again; a typed
+  skip or "not now" follows [Skipped bank](#skipped-bank), as the card's Skip would.
+- **Never call `onboarding_wait`:** no card can answer it.
+- **Company card:** `company_wait` answers `card_unavailable`; follow its case in step 1.
+
 
 
 ## Welcome
@@ -96,7 +109,7 @@ Ask "How will you use QuickBooks Labs?" only when the answer changes what happen
 Skip it when a company is already set, when this conversation already has the answer, or when a
 message already says which, such as "set up books for my new business". Ask once per conversation.
 
-1. **Card.** Signed out (`sign_in_required`), never this card: `company_get_connection_status`
+1. **Card.** [Without cards](#without-cards), never this card: use item 2. Signed out (`sign_in_required`), never this card: `company_get_connection_status`
    only answers `sign_in_required` before sign-in, so use `quickbooks_labs_get_started` instead
    ([Signed out](#signed-out)) and skip the rest of this item. When signed in: step 1's ToolSearch
    already loads `company_get_connection_status`; load it then if it is still deferred. Call it
@@ -107,7 +120,8 @@ message already says which, such as "set up books for my new business". Ask once
    continue in this turn as if the user had replied with that pick; on `waiting`, call it again;
    on `expired`, end the turn. Without a `request_id`, end the turn and wait for the reply.
    Once the card has opened in this conversation, it is the question: never ask again with the
-   picker, AskUserQuestion, or a list, even when the host says the turn had no visible output.
+   picker, AskUserQuestion, or a list, even when the host says the turn had no visible output,
+   unless the user says it did not appear.
    If the host insists on visible text, write only "Pick one on the card above to continue."
 2. **Picker, when QuickBooks Labs is not connected**, when `quickbooks_labs_get_started` is missing or its card does not show,
    or, when signed in, `company_get_connection_status` is missing or returns an authorization error: ask with the host's multiple-choice question tool
@@ -118,6 +132,14 @@ message already says which, such as "set up books for my new business". Ask once
    - "As an accountant": "Managing client books. Pick which clients to manage here."
 
    Without such a tool, write the question and those three choices as a numbered list in the chat.
+
+If a persona wait fails, is denied, or Claude is stopped, do not keep polling or choose for the
+user. A saved card offers **Continue in chat**. That explicit action claims the saved choice
+against the waiter and drafts the reply; the user presses Enter. If the card cannot confirm the
+claim or the waiter already consumed it, follow its exact manual reply instruction. Never call
+`persona_action` yourself or tell the user to click their choice again to start a new turn.
+Older cards can require the user to type their choice. A reply acknowledgment alone does not
+prove that the host sent a drafted message.
 
 The answer, from `onboarding_wait` (`new_business`, `existing_business`, `accountant`), a card
 tile reply, or the picker. Keep it, write no welcome again, and continue in that turn:
@@ -136,11 +158,13 @@ tile reply, or the picker. Keep it, write no welcome again, and continue in that
 QuickBooks Labs is added, but nobody has signed in: `company_get_context` or another company tool
 returns `sign_in_required`. That is not an error and the connector is not broken; do not say it
 is. Nothing is read or changed until the user signs in. The who-are-you answer picks the way in.
-When this conversation has no answer yet, load `quickbooks_labs_get_started` with ToolSearch when it is deferred, then call it once: it shows the
-who-are-you card, which works before sign-in. Write nothing after it and end the turn; the tile
-the user clicks arrives as their next message, one of the three replies step 0 lists. Use step 0's
-picker only when that tool is missing or its card does not show. Do not call
-`company_get_connection_status` or `onboarding_wait` signed out.
+When this conversation has no answer yet, make one ToolSearch for `quickbooks_labs_get_started` and `onboarding_wait` when either is deferred, then call `quickbooks_labs_get_started` once: it shows the
+who-are-you card, which works before sign-in. Write nothing after it. When it returns `request_id`,
+immediately call `onboarding_wait` with that id: on `chosen`, continue in this same turn with the
+returned persona; on `waiting`, call it again immediately; on `expired` or an error, stop waiting.
+Without `request_id`, end the turn; the tile reply arrives as the user's next message. Use step 0's
+picker only when that tool is missing or its card does not show. Never choose a persona for the user.
+Do not call `company_get_connection_status` signed out.
 
 - **New small business** (no QuickBooks Online yet): call `qbo_onboarding` to open the sign-up
   form. Pass `signup_intent: "payments"` only when they said they want to get paid or send
@@ -166,8 +190,6 @@ picker only when that tool is missing or its card does not show. Do not call
   check in that turn. An accountant goes to their client books instead: call `company_list` with
   `client_books: true` and follow the matching case in step 1. A sign-in with no company goes to
   step 1's `no_company` case, which creates one.
-- A user who asks for something before signing up, like an invoice, can see it first:
-  `qbo_sales_preview_invoice` drafts one without an account.
 
 ## 1. Connect
 
@@ -196,7 +218,9 @@ When a company is set, these calls go back to back. This phase calls no `bank_fe
 1. One ToolSearch for `company_get_connection_status`, when it is deferred.
 2. Call `company_get_connection_status` once with `onboarding: true`. It is the final tool call of this turn. A sign-in, authorization, or no such tool uses the QuickBooks Labs connect card. If the result is still `company_selection_required` or `no_company`, the company is not set. Go back to the matching case above. Skip `bank_feed_list_connections`.
 
-Then the turn ends. The last line is the closing line its result names, copied exactly: the top job's yes-or-no question once a bank is connected, or "Connect a bank on the card to continue." when none is. With no bank, that line is the whole reply: no sentence before it saying nothing is connected, because the card says so. `kind: connection_status` with `onboarding` is the onboarding card. `bank_connect_url` is the connect link on that card, not a no-card result. When the host cannot paint the card, write the account lines, or the connect pitch when there is no account, and link `bank_connect_url` before that last line. Label that link Connect in your browser.
+Then the turn ends. The last line is the closing line its result names, copied exactly: the top job's yes-or-no question once a bank is connected, or "Connect a bank on the card to continue." when none is. With no bank, that line is the whole reply: no sentence before it saying nothing is connected, because the card says so. `kind: connection_status` with `onboarding` is the onboarding card. `bank_connect_url` is the connect link on that card, not a no-card result.
+
+When the host cannot paint the card ([Without cards](#without-cards)), the reply replaces that closing line: write the account lines, or the connect pitch when there is no account, then link `bank_connect_url`, labeled Connect in your browser, with one sentence: if a bank or card is already an account in their books, pick that account when QuickBooks asks where it goes, because Add new creates a second account with its own opening balance. The last line is the top job's question once a bank is connected, copied exactly from `onboarding.options[0].offer` (a result with a `request_id` names no closing line), or "Connect a bank with that link, then reply here." when none is, never "Connect a bank on the card to continue."
 
 **Read failed.** After one rerun of any other error, one sentence that the accounts could not be read, plus one next action.
 
@@ -207,15 +231,20 @@ The user's reply:
   `company_get_connection_status` again: the card on screen already shows the bank and Start.
 - A reply typed by the user that a bank was linked, with no such context, runs the connection
   status calls again.
-- "Skip connecting a bank for now." from the onboarding card: follow [Skipped bank](#skipped-bank).
+- "Skip connecting a bank for now." from the onboarding card, or, without cards, a typed skip or
+  "not now" after the connect link: follow [Skipped bank](#skipped-bank).
 - Yes, a named job, or a "Yes, start /<job>." reply from the card starts that job.
 - No refuses the offered job and follows the next-step offer. Do not start the refused job.
-- `continue`, `skip`, and any other reply that is not about a bank, a statement, or the offered job: say connecting is complete, then stop. Do not name Shopify, PayPal, Stripe, Square, or Google Drive. Do not read the feeds again.
+- `continue`, a typed `skip` while the card shows, and any other reply that is not about a bank, a statement, or the offered job: say connecting is complete, then stop. Do not name Shopify, PayPal, Stripe, Square, or Google Drive. Do not read the feeds again.
 
 ### Skipped bank
 
-Skip on the onboarding card unlocks step 2 with only the health report. Ask once for a file
-instead of a bank. The whole reply is exactly:
+Skip on the onboarding card unlocks step 2 with only the health report and keeps `onboarding_wait`
+listening for Start. The card shows optional statement-upload guidance; write nothing while waiting.
+If the user attaches a file, follow Statement import below. A Start runs its job in the same turn.
+
+Without an active card wait (including a typed skip without cards or a skip reply drafted after
+the request expired), ask once for a file instead of a bank. The whole reply is exactly:
 
 No problem. If you have a bank or card statement or a transaction export (PDF, CSV or Excel), attach it here and I'll bring those transactions into QuickBooks for review.
 
@@ -223,26 +252,10 @@ Then end the turn. Do not read the feeds again, pitch connecting a bank, or repe
 report's question. A Start on the card, or any reply other than a file, goes ahead without one:
 follow it and do not ask for a file again.
 
-**Statement import.** A bank or card statement or a transaction export the user attaches after the
-ask, PDF, CSV or Excel:
-
-1. Read every transaction row from the file: date, amount and description exactly as printed.
-   Amounts are signed from the bank's side, so money out and card charges are negative. A file
-   with no readable rows: say so in one sentence and ask for a CSV export. Stop.
-2. Pick the account. Call `accounts_search` for Bank and Credit Card accounts. Use the one whose
-   name or last four digits match the file. With several possible matches, ask which one. With
-   none, ask to create one named for the bank and last four digits, and create it with
-   `accounts_create` (Bank for a bank statement, Credit Card for a card) only after a yes.
-3. Preview in one or two sentences: the number of rows, the date range, money in and money out,
-   and the account. End with "Should I import these <N> transactions into <account>?"
-4. After a yes, import with `bank_feed_transaction_import_start`, following its description for
-   chunks, order, and unconfirmed replies. The rows land in For review.
-5. Report what was imported and what was left out as already in the feed, in one sentence. Then
-   go to the [next-step offer](#next-step-offer). It offers categorizing the imported rows only
-   when one or more rows were imported.
-
-A no to the import or to creating the account: one sentence that nothing was imported, then the
-next-step offer.
+**Statement import.** Read [references/statement-import.md](references/statement-import.md) before
+reading or importing a bank/card statement or transaction export, including a file attached in a
+later turn or a resumed import. It holds the preview and approval, source-row ledger, chunking,
+recovery, and final reconciliation rules. Complete them before the next-step offer.
 
 ## 2. Next steps
 
@@ -257,7 +270,10 @@ to step 3. A finished health report is not finished: it returns here.
 Write no list and no account table. The last line of the turn is one binary question, with no
 alternative-action "or" clause and no second question. Copy it from the ranked job. Example:
 "Should I categorize the 12 transactions waiting in Checking next?"
-One sentence before the question may name an account whose feed `needs_attention`.
+One sentence before the question may name an account whose feed `needs_attention` and link its
+`reconnect_url` for the user to open in their own browser: a bank sign-in when `reconnect_kind` is
+bank_sign_in, QuickBooks' Banking page and its Fix now when it is quickbooks_fix. Never open a bank
+sign-in or QuickBooks' Fix now with browser tools.
 
 Before any job has handed back, and while the feeds are unchanged since the connection status
 result, the ranked list is `onboarding.options` on that result. Offer `options[0]` and copy its

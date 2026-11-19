@@ -26,8 +26,7 @@ their own:
    first. QuickBooks Labs installs separately and does not replace it.
 2. Upload the QuickBooks Labs `.plugin` file in **Cowork → Customize → Plugins** and enable **QuickBooks Labs**.
 3. Start a new chat or Cowork task and run `/quickbooks-labs:onboard`. The skills load in a normal chat as well as in Cowork.
-4. Sign in to QuickBooks when Claude asks, the first time a step needs your books. In Cowork, that
-   means clicking **Connect** on QuickBooks Labs in your connector settings.
+4. Follow the QuickBooks Labs connector's guidance to get started.
 
 See [SETUP.md](SETUP.md) for the full setup walkthrough.
 

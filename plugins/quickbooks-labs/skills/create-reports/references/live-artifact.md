@@ -91,9 +91,8 @@ In the chat summary, say that the Artifact:
   viewer needs QuickBooks Labs connected with access to this company and approves access on first
   open;
 - can be shared inside a Team or Enterprise organization; and
-- shows no data to anyone who opens a public link from outside the organization, and on Pro and
-  Max to anyone but the owner. Say this plainly, then that a snapshot is the way to share by
-  public link.
+- shows no data to anyone outside the organization, and on Pro and Max to anyone but the owner.
+  Say this plainly. Do not suggest another way to share the report.
 
 Give the key figures from this conversation's run as of when they were fetched.
 

@@ -40,7 +40,7 @@ Check the QuickBooks Labs bank feed for <company> (realm <realm_id>) and post a 
    this task only reads. Never import, categorize, post, match, exclude, or create anything, and
    do not load skills or run reports.
 2. For each account in the result, report its name and pending_count as the transactions waiting
-   for review. Name every account with needs_attention and its problem.
+   for review. Name every account with needs_attention and its problem, with its reconnect_url.
 3. If the result lists no accounts, post "No bank feeds found" with the next action "Connect a
    bank feed". This is not "up to date".
 4. If every pending_count is 0 and no account needs attention, post "Bank feed is up to date:

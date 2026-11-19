@@ -1,14 +1,14 @@
 ---
 name: create-reports
-description: Create Claude Artifacts containing QuickBooks financial reports and visualizations from QuickBooks Labs, either live pages that rerun the report through the QuickBooks Labs connector each time they open or fixed snapshots, and optionally schedule recurring updates. Use whenever the user invokes /create-reports or asks to see, prepare, compare, summarize, chart, keep up to date, or build a dashboard of a P&L, balance sheet, cash flow statement, trial balance, aging, sales, vendor, inventory, transaction, or other QuickBooks report. Clarify missing details and render only values returned by the tool.
-compatibility: Requires Claude Artifacts and the QuickBooks Labs MCP report tools. Live Artifacts also need QuickBooks Labs as a claude.ai connector with artifact connector calls on. Claude Cowork scheduled tasks are optional and are used only when the user requests recurring updates.
+description: Create QuickBooks financial reports and visualizations from QuickBooks Labs as Claude Artifacts (live pages that rerun the report through the QuickBooks Labs connector each time they open, or fixed snapshots), as a table in chat, or as a local file, and optionally schedule Artifact updates. Use whenever the user invokes /create-reports or asks to see, prepare, compare, summarize, chart, keep up to date, or build a dashboard of a P&L, balance sheet, cash flow statement, trial balance, aging, sales, vendor, inventory, transaction, or other QuickBooks report. Clarify missing details and render only values returned by the tool.
+compatibility: Requires the QuickBooks Labs MCP report tools. Claude Artifacts are optional; without them a report appears in chat or as a local file. Live Artifacts also need QuickBooks Labs as a claude.ai connector with artifact connector calls on. Claude Cowork scheduled tasks are optional and are used only when the user requests recurring updates.
 ---
 
 # Create QuickBooks reports
 
-Turn the user's reporting question into the right QuickBooks report, then present the returned
-data in a useful artifact with a concise chat summary. Treat the user's wording as the source of
-intent: do not force a standard report pack when they asked for one specific report.
+Choose the QuickBooks report that answers the user's question. Present its returned data in an
+Artifact with a concise chat summary, or in chat or a local file (section 1). Do not force a
+report pack when they asked for one report.
 
 ## Ground rules
 
@@ -21,14 +21,15 @@ intent: do not force a standard report pack when they asked for one specific rep
   rather than listing the entire report catalog.
 - Use exact values, labels, dates, basis, and currency returned by QuickBooks Labs. A planned tool
   call, an empty result, or a failed call is not a generated report.
-- Every completed report must be a Claude Artifact. Do not substitute a chat-only table,
-  Markdown attachment, or claimed artifact link for an actual artifact.
+- A completed report is an Artifact, a table in chat, or a local file (section 1). Never claim an
+  Artifact, link, or file that was not created, and never publish a report the user asked to keep
+  in chat or in a file.
 - Calculate and chart from parsed `values`, not display `cells`, as the `reports_run`
   description explains.
 - Never invent report rows, balances, comparisons, trends, explanations, or accounting advice.
   Separate observations supported by the report from hypotheses that would need more evidence.
-- Do not expose unnecessary sensitive details in chat. Keep full report data in the artifact when
-  the host supports artifacts.
+- Do not expose unnecessary sensitive details in chat. With an Artifact, keep the full report
+  data in it.
 - An Artifact is live only when its page fetches through a declared QuickBooks Labs connector. Never
   call a snapshot live or ask the user to reload one to see whether it refreshes; it will not.
   Never republish a live page with fixed figures.
@@ -50,7 +51,7 @@ At the start, identify:
 2. the reporting period or as-of date;
 3. the accounting basis when the report supports one;
 4. the desired presentation, such as table, graph, comparison, or concise summary; and
-5. live or snapshot.
+5. where the report goes: an Artifact (live or snapshot), chat, or a local file.
 
 Reuse details the user already supplied. Ask only for missing information, in one question.
 
@@ -80,6 +81,21 @@ choices appropriate to the report:
 For reports that support Cash or Accrual basis, include that choice in the same question if the
 user has not stated it. Do not confuse a cash-basis P&L with a Statement of Cash Flows.
 
+### Artifact, chat, or file
+
+A report goes in an Artifact, except:
+
+- **Chat:** the user asks for it in chat ("as a table here", "no Artifact", "don't host it"), or
+  Claude cannot create an Artifact in this host.
+- **File:** the user asks for a file ("save it as a file", "a local file", "download").
+
+The choice holds for later reports until the user asks for an Artifact. A chat or file report is
+never published and gets no live-or-snapshot question.
+
+Read [references/chat-and-file.md](references/chat-and-file.md) before presenting a report in
+chat or writing a local file, including when the first request asks for one, when the user asks
+in a later turn, and when Claude cannot create an Artifact. It holds the table and file rules.
+
 ### Live or snapshot
 
 A live Artifact reruns its report through the viewer's QuickBooks Labs connector each time it opens;
@@ -96,14 +112,13 @@ Required QuickBooks Labs capabilities:
 - `reports_list`
 - `reports_run`
 
-Required host capability:
+Host capability, needed only for an Artifact:
 
 - Claude Artifacts
 
 If the report tools are unavailable, tell the user QuickBooks Labs must be connected and offer the
-host's connector setup flow. Stop after that handoff. If Claude cannot create an Artifact, tell
-the user to enable Artifacts and cloud code/file creation, then stop. Do not generate the report
-only in chat.
+host's connector setup flow. Stop after that handoff. If Claude cannot create an Artifact, do not
+stop: the report goes in chat (section 1).
 
 Live is available only when the Artifact tool lets a page declare QuickBooks Labs as a connector.
 That needs QuickBooks Labs connected to the user's claude.ai account (Settings > Connectors),
@@ -171,37 +186,11 @@ Read [references/graphs.md](references/graphs.md) before choosing a time groupin
 graph, including when the first request asks for a graph or trend and when the user accepts an
 offered graph in a later turn. It holds the grouping and chart rules.
 
-Detail reports can be large. Narrow the period and filters, request only useful columns, and use
-pagination when the catalog says it is supported. Never imply that the first page is complete
-when `meta.page.next_offset` is present. A page's totals cover only that page, so never
-quote them as the report's totals. A result over the size limit comes back cut, with
-`meta.truncated` set and the summary saying TRUNCATED. Its last section is complete only when
-`meta.truncated.cut_at` is `section`; when it is `row`, the rows stop mid-section, so never show
-that last section as whole. When it is not a page and `meta.truncated.totals_available` is
-absent, its totals are QuickBooks' own, so quote them; when `totals_available` is present, only
-the last totals were kept, so say which are missing. Never sum the rows or present them as the whole report. Tell the user what was left
-out and narrow the request the way the summary suggests.
-
-To show a whole detail report that is too big for one result, on a snapshot only (a live page
-shows one result with its warning), page through it and combine the pages into one section:
-
-- Call `reports_run` with `page`, starting at offset 0, and follow `meta.page.next_offset` until
-  it is null. Keep a page's own cut: if a page has `meta.truncated`, its `next_offset` already
-  resumes at the first dropped row.
-- Copy every row exactly as returned, `cell_ids` included; never retype or reshape rows.
-- Every page repeats each section's Header row and, on a General Ledger, its Beginning Balance
-  row (the Data row with no `cell_ids`). Keep each only the first time it appears, and drop every
-  page's Summary rows and `totals`: they cover that page only.
-- Take the `totals` (the level-0 Summary rows) from one run of the same request without `page`,
-  and put each after the last row of its section. A cut run keeps every total unless its
-  `meta.truncated.totals_available` is set; if it is, say which totals are missing. A cut run
-  can drop Summary rows below level 0, so combine pages only when every Summary row the pages
-  return is level 0 (a General Ledger or a transaction list); otherwise show the cut result.
-- Check that the combined Data rows with `cell_ids` number the sum of the pages' and that no
-  posting repeats. A posting is the same only when its `path`, transaction id and amount all
-  match: one transaction posts once per account, so the same id under different accounts is
-  normal. Then drop `meta.page` and `meta.truncated` from the combined report and
-  add a note naming the pages combined. If a check fails, show the cut result instead.
+Read [references/detail-reports.md](references/detail-reports.md) before running a detail report,
+interpreting any paged or truncated result, drilling from a P&L account, or calculating from
+detail, including initial requests and accepted follow-ups. It holds account filters,
+pagination, aggregation and transaction-id rules. A transaction count across several accounts
+counts each transaction once, never the sum of per-account counts.
 
 ## 5. Validate the result
 
@@ -241,11 +230,14 @@ Give each report one status:
   exactly as returned, mark the rows, other totals, and basis as not returned, and give rerunning
   the report as the next action. A labeled partial report tells the user what QuickBooks
   returned; never fill the gaps from the summary's row counts or from other reports.
-- **Blocked:** the call failed, or QuickBooks Labs or Artifacts are unavailable. Show the error and
+- **Blocked:** the call failed, or QuickBooks Labs is unavailable. Show the error and
   give the tool's `next_action` to the user as the next step instead of acting on it. The only
   exception is one immediate rerun of the same call, which counts against the limit above.
 
 ## 6. Present the report
+
+This section builds an Artifact. A chat or file report follows
+[references/chat-and-file.md](references/chat-and-file.md) instead.
 
 Create one Claude Artifact per requested report. This keeps each report readable and lets the
 user request several reports without combining unlike structures.
@@ -358,7 +350,8 @@ update that Artifact automatically on a cadence. Offer:
 - Not now
 
 A live Artifact is already current, so do not offer this. If the user asks for a schedule on one,
-say so and offer dated snapshots, which leave the live Artifact unchanged.
+say so and offer dated snapshots, which leave the live Artifact unchanged. A chat or file report
+has no Artifact to update, so do not offer this for one either.
 
 Read [references/scheduled-updates.md](references/scheduled-updates.md) before asking for
 schedule details or creating a scheduled task, including when the first request already asks
@@ -371,17 +364,18 @@ the rules for creating the task and what its prompt must contain.
 Sheet. When a workflow loads it:
 
 - The caller's overrides win, whether they arrive in the Skill tool's `args` (`reports`, `period`,
-  `artifact: "combined"` for one Artifact holding every report, `kind` of `live` or `snapshot`,
-  and `notes` for its data-quality notes) or in the caller's own instructions: for example,
-  skipping the follow-up and scheduled-update offers.
-- Build the passed `kind`. When `kind` is missing, ask live or snapshot, live first, and end the
-  turn before any report call. When the passed `kind` is live and live is unavailable, section 2
-  applies. Show a report with no data as an `empty` section.
+  `artifact: "combined"` for one Artifact, reply, or file holding every report, `kind` of `live`,
+  `snapshot`, `chat`, or `file`, and `notes` for its data-quality notes) or in the caller's own
+  instructions: for example, skipping the follow-up and scheduled-update offers.
+- Build the passed `kind`. When `kind` is missing, it is `chat` if Claude cannot create an
+  Artifact; otherwise ask live or snapshot, live first, and end the turn before any report call.
+  When the passed `kind` is live and live is unavailable, section 2 applies. Show a report with
+  no data as an `empty` section.
 - A partial or blocked report does not stop the others. Show its section with the returned
   figures, error, and next action, and offer the retry to the user.
 - End with this hand-back instead of offering next steps of your own:
   - `reports`: for each report, its name, status, and the returned period and basis;
-  - `artifact`: the Artifact title, or blocked; and
+  - `artifact`: the Artifact title, `chat`, the file's path, or blocked; and
   - `next_action`: one step for the user when a report is not generated.
 
 ## Completion response
@@ -390,10 +384,11 @@ End with:
 
 - Report: generated, partial, empty, or blocked
 - Period and basis: the exact returned settings
-- Artifact: live, snapshot, not created (no data), or blocked
+- Output: live Artifact, snapshot Artifact, chat, local file, not created (no data), or blocked
 - Scheduled update: created, declined, instructions provided, awaiting schedule details, or not
-  offered (live)
+  offered (live, chat, or file)
 - Next action: one concrete option
 
-Do not mark the report generated until QuickBooks Labs returned report data and the Claude Artifact
-was actually created. Do not mark a scheduled update created until Cowork confirms the task.
+Do not mark the report generated until QuickBooks Labs returned report data and the Artifact was
+actually created, the table shown, or the file written. Do not mark a scheduled update created
+until Cowork confirms the task.
